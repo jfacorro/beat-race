@@ -17,7 +17,12 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT"/>
+                <category android:name="android.intent.category.ALTERNATIVE"/>
+            </intent-filter>
         </activity>
+        <activity android:name=".SongPlayerActivity"></activity>
     </application>
 
 </manifest>

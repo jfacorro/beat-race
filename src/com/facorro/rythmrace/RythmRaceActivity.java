@@ -1,6 +1,7 @@
 package com.facorro.rythmrace;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -37,9 +38,24 @@ public class RythmRaceActivity extends Activity implements TextWatcher
         lstSongs.setOnItemClickListener(new OnItemClickListener() {
 
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-				
+				loadSong();
 			}        	
 		});
+    }
+    
+    public void loadSong()
+    {
+    	Cursor cursor = this.songsAdapter.getCursor();
+    	
+    	int dataIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
+    	
+    	String filename = cursor.getString(dataIndex);
+    	
+    	Intent playSongIntent = new Intent(RythmRaceActivity.this, SongPlayerActivity.class);
+    	
+    	playSongIntent.putExtra("filename", filename);
+    	
+    	RythmRaceActivity.this.startActivity(playSongIntent); 
     }
     
     /**
