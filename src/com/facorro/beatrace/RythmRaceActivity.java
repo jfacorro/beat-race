@@ -1,4 +1,4 @@
-package com.facorro.rythmrace;
+package com.facorro.beatrace;
 
 import android.app.Activity;
 import android.content.Intent;

@@ -8,4 +8,8 @@
    	    android:id="@+id/txtTest"
 		android:layout_width="fill_parent"
         android:layout_height="wrap_content" />
+	<com.facorro.beatrace.SongView
+	    android:id="@+id/songView"
+		android:layout_width="fill_parent"
+        android:layout_height="match_parent" />
 </LinearLayout>

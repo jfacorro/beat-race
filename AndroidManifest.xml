@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.facorro.rythmrace"
+    package="com.facorro.beatrace"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -22,7 +22,7 @@
                 <category android:name="android.intent.category.ALTERNATIVE"/>
             </intent-filter>
         </activity>
-        <activity android:name=".SongPlayerActivity"></activity>
+        <activity android:name="com.facorro.beatrace.SongPlayerActivity"></activity>
     </application>
 
 </manifest>
