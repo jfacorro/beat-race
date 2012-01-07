@@ -6,11 +6,13 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 
 public class SongPlayerActivity extends Activity {
 	
 	private FMODAudioDevice mFMODAudioDevice = new FMODAudioDevice();
 	private String filename;
+	private TextView txtBpm;
 	
 	/** Called when the activity is first created. */
 	public void onCreate(Bundle savedInstanceState) {
@@ -20,6 +22,8 @@ public class SongPlayerActivity extends Activity {
         Intent intent = this.getIntent();
         this.filename = intent.getStringExtra("filename");
         this.filename = this.filename.replace("/mnt/", "/");
+        
+        this.txtBpm = (TextView) this.findViewById(R.id.txtBpm);
 	}
 	
 	public void slower(View view)
@@ -41,6 +45,10 @@ public class SongPlayerActivity extends Activity {
     	mFMODAudioDevice.start();
     	
     	cBegin(this.filename);
+    	
+    	float bpm = cGetBpm();
+    	
+    	this.txtBpm.setText(Float.toString(bpm));    	
     }
     
     @Override
@@ -64,6 +72,7 @@ public class SongPlayerActivity extends Activity {
 	public native void cEnd();
 	public native void cPause();
 	public native boolean cGetPaused();
-	public native boolean cSlower();
-	public native boolean cFaster();
+	public native void cSlower();
+	public native void cFaster();
+	public native float cGetBpm();
 }

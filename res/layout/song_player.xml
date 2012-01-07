@@ -23,6 +23,9 @@
 		    android:onClick="faster"
 		    android:text="FASTER" />
 	</LinearLayout>
+	<TextView android:id="@+id/txtBpm"
+	    android:layout_width="fill_parent"
+	    android:layout_height="20dp"/>
 
 	<com.facorro.beatrace.SongView
 	    android:id="@+id/songView"
