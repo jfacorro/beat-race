@@ -18,6 +18,10 @@
 #include "fmod_dsp.h"
 #include "fmod_errors.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 FMOD_SYSTEM  *gSystem        = 0;
 FMOD_SOUND	 *gSound         = 0;
 FMOD_CHANNEL *gChannel       = 0;
@@ -45,8 +49,8 @@ void Java_com_facorro_beatrace_SongPlayerActivity_cBegin(JNIEnv *env, jobject th
 	result = FMOD_System_Init(gSystem, 32, FMOD_INIT_NORMAL, 0);
 	CHECK_RESULT(result);
 	
-	const jbyte *filename;
-	filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
+	const char *filename;
+	filename = env->GetStringUTFChars(jfilename, NULL);
 	
 	FMOD_MODE mode = FMOD_HARDWARE | FMOD_CREATESTREAM | FMOD_OPENONLY | FMOD_2D;
 	result = FMOD_System_CreateSound(gSystem, filename, mode, 0, &gSound);
@@ -102,13 +106,13 @@ jboolean Java_com_facorro_beatrace_SongPlayerActivity_cGetPaused(JNIEnv *env, jo
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cSlower(JNIEnv *env, jobject thiz)
 {
-	currentFreq = currentFreq - 100;
+	currentFreq -= 100;
 	setFrequency(currentFreq);
 }
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cFaster(JNIEnv *env, jobject thiz)
 {
-	currentFreq = currentFreq + 100;
+	currentFreq += 100;
 	setFrequency(currentFreq);
 }
 
@@ -120,3 +124,7 @@ void setFrequency(float freq)
 	
 	CHECK_RESULT(result);
 }
+
+#ifdef __cplusplus
+}
+#endif
