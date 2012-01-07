@@ -21,6 +21,9 @@
 FMOD_SYSTEM  *gSystem        = 0;
 FMOD_SOUND	 *gSound         = 0;
 FMOD_CHANNEL *gChannel       = 0;
+float		 currentFreq	 = 0;
+
+void setFrequency(float freq);
 
 
 void CHECK_RESULT(FMOD_RESULT result)
@@ -51,6 +54,8 @@ void Java_com_facorro_beatrace_SongPlayerActivity_cBegin(JNIEnv *env, jobject th
 
 	result = FMOD_System_PlaySound(gSystem, FMOD_CHANNEL_FREE, gSound, 0, &gChannel);
 	CHECK_RESULT(result);
+	
+	FMOD_Channel_GetFrequency(gChannel, &currentFreq);
 }
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cUpdate(JNIEnv *env, jobject thiz)
@@ -95,5 +100,23 @@ jboolean Java_com_facorro_beatrace_SongPlayerActivity_cGetPaused(JNIEnv *env, jo
 	return paused;
 }
 
+void Java_com_facorro_beatrace_SongPlayerActivity_cSlower(JNIEnv *env, jobject thiz)
+{
+	currentFreq = currentFreq - 100;
+	setFrequency(currentFreq);
+}
 
+void Java_com_facorro_beatrace_SongPlayerActivity_cFaster(JNIEnv *env, jobject thiz)
+{
+	currentFreq = currentFreq + 100;
+	setFrequency(currentFreq);
+}
 
+void setFrequency(float freq)
+{
+	FMOD_RESULT result = FMOD_OK;
+	
+	result = FMOD_Channel_SetFrequency(gChannel, currentFreq);
+	
+	CHECK_RESULT(result);
+}

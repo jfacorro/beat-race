@@ -5,7 +5,7 @@ import org.fmod.FMODAudioDevice;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
+import android.view.View;
 
 public class SongPlayerActivity extends Activity {
 	
@@ -18,15 +18,20 @@ public class SongPlayerActivity extends Activity {
         setContentView(R.layout.song_player);
         
         Intent intent = this.getIntent();
-        
-        TextView text = (TextView) this.findViewById(R.id.txtTest);
-        
-        //SurfaceView view = (SurfaceView) this.findViewById(R.id.surfaceView);
-        
         this.filename = intent.getStringExtra("filename");
         this.filename = this.filename.replace("/mnt/", "/");
-        text.setText(this.filename);
 	}
+	
+	public void slower(View view)
+	{
+		cSlower();		
+	}
+	
+	public void faster(View view)
+	{
+		cFaster();
+	}
+
 	
     @Override
     public void onStart()
@@ -59,4 +64,6 @@ public class SongPlayerActivity extends Activity {
 	public native void cEnd();
 	public native void cPause();
 	public native boolean cGetPaused();
+	public native boolean cSlower();
+	public native boolean cFaster();
 }

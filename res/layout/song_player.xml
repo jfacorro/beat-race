@@ -4,12 +4,30 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical" >
-	<TextView 
-   	    android:id="@+id/txtTest"
+	<LinearLayout
 		android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+	    android:layout_height="wrap_content"
+	    android:gravity="center_horizontal"
+	    android:orientation="horizontal">
+		<Button
+		    android:id="@+id/btnSlower"
+		    android:layout_width="100dp"
+		    android:layout_height="wrap_content"
+		    android:onClick="slower"
+		    android:text="SLOWER" />
+		
+		<Button
+		    android:id="@+id/btnFaster"
+		    android:layout_width="100dp"
+		    android:layout_height="wrap_content"
+		    android:onClick="faster"
+		    android:text="FASTER" />
+	</LinearLayout>
+
 	<com.facorro.beatrace.SongView
 	    android:id="@+id/songView"
 		android:layout_width="fill_parent"
         android:layout_height="match_parent" />
+	
+
 </LinearLayout>
