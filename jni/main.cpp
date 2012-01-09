@@ -15,6 +15,9 @@
 #include <android/log.h>
 #include <stdlib.h>
 #include <BPMDetect.h>
+#include "FMODSystem.h"
+#include "FMODSound.h"
+#include "FMODDspBpm.h"
 #include "fmod.h"
 #include "fmod_dsp.h"
 #include "fmod_errors.h"
@@ -28,175 +31,77 @@ using namespace soundtouch;
 extern "C" {
 #endif
 
-FMOD_SYSTEM  *gSystem        = 0;
-FMOD_SOUND	 *gSound         = 0;
-FMOD_CHANNEL *gChannel       = 0;
-float		 currentFreq	 = 0;
+FMODSystem	*sys;
+FMODSound	*sound;
+FMODDspBpm	*dsp;
 
-void setFrequency(float freq);
-
-
-void CHECK_RESULT(FMOD_RESULT result)
+jfloat Java_com_facorro_beatrace_SongPlayerActivity_cBegin(JNIEnv *env, jobject thiz, jstring jfilename)
 {
-	if (result != FMOD_OK)
-	{
-		__android_log_print(ANDROID_LOG_ERROR, "fmod", "FMOD error! (%d) %s", result, FMOD_ErrorString(result));
-		exit(-1);
-	}
-}
-
-void Java_com_facorro_beatrace_SongPlayerActivity_cBegin(JNIEnv *env, jobject thiz, jstring jfilename)
-{
-	FMOD_RESULT result = FMOD_OK;
-
-	result = FMOD_System_Create(&gSystem);
-	CHECK_RESULT(result);
-
-	result = FMOD_System_Init(gSystem, 32, FMOD_INIT_NORMAL, 0);
-	CHECK_RESULT(result);
-	
 	const char *filename;
 	filename = env->GetStringUTFChars(jfilename, NULL);
-	
-	FMOD_MODE mode = FMOD_HARDWARE | FMOD_CREATESTREAM | FMOD_OPENONLY | FMOD_2D;
-	result = FMOD_System_CreateSound(gSystem, filename, mode, 0, &gSound);
-	CHECK_RESULT(result);
 
-	result = FMOD_System_PlaySound(gSystem, FMOD_CHANNEL_FREE, gSound, 1, &gChannel);
-	CHECK_RESULT(result);
-	
-	FMOD_Channel_GetFrequency(gChannel, &currentFreq);
+	sys = new FMODSystem();
+	sys->init();
+
+	sound = new FMODSound(sys, filename, true);
+	dsp = new FMODDspBpm(sys, sound);
+
+	sound->play();
+
+	return sound->getFrequency();
 }
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cUpdate(JNIEnv *env, jobject thiz)
 {
-	FMOD_RESULT	result = FMOD_OK;
-
-	result = FMOD_System_Update(gSystem);
-	CHECK_RESULT(result);
+	sys->update();
 }
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cEnd(JNIEnv *env, jobject thiz)
 {
-	FMOD_RESULT result = FMOD_OK;
-
-	result = FMOD_Sound_Release(gSound);
-	CHECK_RESULT(result);
-
-	result = FMOD_System_Release(gSystem);
-	CHECK_RESULT(result);
+	delete sound;
+	delete dsp;
+	delete sys;
 }
 
 void Java_com_facorro_beatrace_SongPlayerActivity_cPause(JNIEnv *env, jobject thiz)
 {
-	FMOD_RESULT result = FMOD_OK;
-	FMOD_BOOL paused = 0;
-
-	result = FMOD_Channel_GetPaused(gChannel, &paused);
-	CHECK_RESULT(result);
-
-	result = FMOD_Channel_SetPaused(gChannel, !paused);
-	CHECK_RESULT(result);
+	sound->pause();
 }
 
-jboolean Java_com_facorro_beatrace_SongPlayerActivity_cGetPaused(JNIEnv *env, jobject thiz)
+void Java_com_facorro_beatrace_SongPlayerActivity_cSetFrequency(JNIEnv *env, jobject thiz, jfloat freq)
 {
-	FMOD_RESULT result = FMOD_OK;
-	FMOD_BOOL paused = 0;
-
-	result = FMOD_Channel_GetPaused(gChannel, &paused);
-	CHECK_RESULT(result);
-
-	return paused;
+	sound->setFrequency(freq);
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cSlower(JNIEnv *env, jobject thiz)
+jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpmSoFar(JNIEnv *env, jobject thiz)
 {
-	currentFreq -= 100;
-	setFrequency(currentFreq);
-}
-
-void Java_com_facorro_beatrace_SongPlayerActivity_cFaster(JNIEnv *env, jobject thiz)
-{
-	currentFreq += 100;
-	setFrequency(currentFreq);
-}
-
-void setFrequency(float freq)
-{
-	FMOD_RESULT result = FMOD_OK;
-	
-	result = FMOD_Channel_SetFrequency(gChannel, currentFreq);
-	
-	CHECK_RESULT(result);
-}
-
-float getFrequency()
-{
-	FMOD_RESULT result = FMOD_OK;
-
-	float freq = 0;
-
-	result = FMOD_Channel_GetFrequency(gChannel, &freq);
-
-	CHECK_RESULT(result);
-
-	return freq;
-}
-
-int getChannels()
-{
-	FMOD_RESULT result = FMOD_OK;
-
-	int channels = 0;
-	result = FMOD_Sound_GetFormat(gSound, 0, 0, &channels, 0);
-	CHECK_RESULT(result);
-
-	return channels;
-}
-
-unsigned int readData(void * buffer, unsigned int length)
-{
-    unsigned int read = 0;
-
-    FMOD_RESULT result = FMOD_Sound_ReadData(gSound, buffer, length, &read);
-
-    if(result != FMOD_ERR_FILE_EOF)
-    {
-    	CHECK_RESULT(result);
-    }
-
-    return read;
-}
-
-void seekData(unsigned int position)
-{
-    FMOD_Sound_SeekData(gSound, position);
+	return dsp->getBpmSoFar();
 }
 
 jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject thiz)
 {
 	__android_log_print(ANDROID_LOG_ERROR, "fmod", "Starting Bpm Extraction...");
 
-    int channels = getChannels();
+    int channels = sound->getChannels();
     int numBytes = sizeof(SAMPLETYPE);
 
     SAMPLETYPE samples[BUFF_SIZE];
     char * buffer = new char[BUFF_SIZE * numBytes];
     unsigned int bufferSizeInBytes = BUFF_SIZE * numBytes;
 
-    BPMDetect bpm(channels, (int)getFrequency());
+    BPMDetect bpm(channels, (int)sound->getFrequency());
 
     bool done = false;
 
     unsigned int read = 0;
     unsigned int readTotal = 0;
+    unsigned int samplesTotal = 0;
+    unsigned int enoughSamples = bpm.windowLen * 2500;
+
 
     while(!done)
     {
-        read = readData(buffer, bufferSizeInBytes);
-
-    	__android_log_print(ANDROID_LOG_ERROR, "fmod", "Calculating Bpm...(%d)", read);
+        read = sound->readData(buffer, bufferSizeInBytes);
 
         for(unsigned int i = 0; i < bufferSizeInBytes; i+= numBytes)
         {
@@ -205,21 +110,27 @@ jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject
 			samples[index] = sample;
         }
 
-        if(read < BUFF_SIZE * sizeof(SAMPLETYPE))
-        {
-            done = true;
-        }
-
         unsigned int numsamples = read / sizeof(SAMPLETYPE);
+        samplesTotal += numsamples;
 
         bpm.inputSamples(samples, numsamples / channels);
 
+    	__android_log_print(ANDROID_LOG_ERROR, "fmod", "Calculating Bpm... # read: %d - Window: %d", samplesTotal, bpm.windowLen);
+
         readTotal += read;
+
+        if(
+        	read < BUFF_SIZE * sizeof(SAMPLETYPE)
+        	|| samplesTotal > enoughSamples
+        )
+        {
+            done = true;
+        }
     }
 
     __android_log_print(ANDROID_LOG_ERROR, "fmod", "Total Bytes Read: (%d)", readTotal);
 
-    seekData(0);
+    sound->seekData(0);
 
     delete buffer;
 

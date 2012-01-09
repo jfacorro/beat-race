@@ -14,6 +14,9 @@ public class SongPlayerActivity extends Activity {
 	private String filename;
 	private TextView txtBpm;
 	
+	private float originalFrequency;
+	private float currentFrequency;
+	
 	/** Called when the activity is first created. */
 	public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,14 +31,25 @@ public class SongPlayerActivity extends Activity {
 	
 	public void slower(View view)
 	{
-		cSlower();		
+		this.currentFrequency -= 100;
+		cSetFrequency(this.currentFrequency);
+
+		this.updateBpm();
 	}
 	
 	public void faster(View view)
 	{
-		cFaster();
-	}
+		this.currentFrequency += 100;
+		cSetFrequency(this.currentFrequency);
 
+		this.updateBpm();
+	}
+	
+	private void updateBpm()
+	{
+		float bpm = cGetBpmSoFar();    	
+    	this.txtBpm.setText(Float.toString(bpm));
+	}
 	
     @Override
     public void onStart()
@@ -44,11 +58,8 @@ public class SongPlayerActivity extends Activity {
     	
     	mFMODAudioDevice.start();
     	
-    	cBegin(this.filename);
-    	
-    	float bpm = cGetBpm();
-    	
-    	this.txtBpm.setText(Float.toString(bpm));    	
+    	this.originalFrequency = cBegin(this.filename);
+    	this.currentFrequency = this.originalFrequency; 
     }
     
     @Override
@@ -67,12 +78,12 @@ public class SongPlayerActivity extends Activity {
         System.loadLibrary("main");
     }
     
-	public native void cBegin(String filename);
+	public native float cBegin(String filename);
 	public native void cUpdate();
 	public native void cEnd();
 	public native void cPause();
 	public native boolean cGetPaused();
-	public native void cSlower();
-	public native void cFaster();
+	public native void cSetFrequency(float freq);
 	public native float cGetBpm();
+	public native float cGetBpmSoFar();
 }

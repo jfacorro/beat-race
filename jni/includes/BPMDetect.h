@@ -92,9 +92,6 @@ protected:
     /// Decimate sound by this coefficient to reach approx. 500 Hz.
     int decimateBy;
 
-    /// Auto-correlation window length
-    int windowLen;
-
     /// Number of channels (1 = mono, 2 = stereo)
     int channels;
 
@@ -154,6 +151,9 @@ public:
     ///
     /// \return Beats-per-minute rate, or zero if detection failed.
     float getBpm();
+
+    /// Auto-correlation window length
+    int windowLen;
 };
 
 }

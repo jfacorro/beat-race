@@ -17,7 +17,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE           := main
-LOCAL_SRC_FILES        := main.cpp BPMDetect.cpp FIFOSampleBuffer.cpp PeakFinder.cpp
+LOCAL_SRC_FILES        := main.cpp BPMDetect.cpp FIFOSampleBuffer.cpp PeakFinder.cpp FMODDsp.cpp FMODDspBpm.cpp FMODSound.cpp FMODSystem.cpp
 LOCAL_LDLIBS 		   := -llog
 LOCAL_SHARED_LIBRARIES := fmodex
 
