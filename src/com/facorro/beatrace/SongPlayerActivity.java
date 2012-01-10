@@ -10,7 +10,6 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
@@ -71,15 +70,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
         rotationMatrix[ 4] = 1;
         rotationMatrix[ 8] = 1;
         rotationMatrix[12] = 1;
-	}
-	
-	@Override
-	public boolean onTouchEvent(MotionEvent event) {
-		if(event.getAction() == 0)
-		{
-			this.bpmReader.tap();
-		}
-		return true;
 	}
 	
 	/**
