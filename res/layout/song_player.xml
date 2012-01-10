@@ -25,7 +25,7 @@
 	</LinearLayout>
 	<TextView android:id="@+id/txtBpm"
 	    android:layout_width="fill_parent"
-	    android:layout_height="20dp"/>
+	    android:layout_height="60dp"/>
 
 	<com.facorro.beatrace.SongView
 	    android:id="@+id/songView"
