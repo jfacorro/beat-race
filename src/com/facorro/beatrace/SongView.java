@@ -36,6 +36,9 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		
 		public SurfaceHolder surfaceHolder;
 		public Context context;
+		private int lastSlope;
+		private double cycle;
+		private boolean beat;
 		
 		public SongThread(SurfaceHolder surfaceHolder, Context context,
                 Handler handler) {
@@ -135,6 +138,29 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.values.add(value);
 			
 			this.dirty = 2;
+			
+			this.detectCycle();
+		}
+		
+		private void detectCycle() {
+			if(this.lastSlope != this.slope())
+			{
+				this.lastSlope = this.slope();
+				this.cycle += 1;
+			}
+			
+			if(this.cycle == 2)
+			{
+				this.beat = true;
+				this.cycle = 0;
+			}
+		}
+		
+		public boolean beat()
+		{
+			boolean result = this.beat;
+			this.beat = false;
+			return result;
 		}
 		
 		public int slope()
@@ -185,8 +211,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	}
 	
 	/** The thread that actually draws the animation */
-	private SongThread thread;
-	
+	private SongThread thread;		
 	
     public SongView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -196,7 +221,9 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
         holder.addCallback(this);
 
         // create thread only; it's started in surfaceCreated()
-        thread = new SongThread(holder, context, null);
+        thread = new SongThread(holder, context, new Handler(){
+        	
+        });
 
         //setFocusable(true); // make sure we get key events
     }
@@ -228,4 +255,15 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	public void addValue(double value) {
 		this.thread.addValue(value);
 	}
+	
+	public int slope()
+	{
+		return this.thread.slope();
+	}
+
+	public boolean beat() {
+		return this.thread.beat();
+	}
+
+
 }
