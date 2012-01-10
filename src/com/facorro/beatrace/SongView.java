@@ -14,17 +14,17 @@ import android.view.SurfaceView;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	class SongThread extends Thread {
-		private int MAX_VALUES = 100;
-		private float INIT_MIN_VALUE = 10.0f;
-		private float INIT_MAX_VALUE = -10.0f;
+		private static final int MAX_VALUES = 50;
+		private static final double INIT_MIN_VALUE = -10.0f;
+		private static final double INIT_MAX_VALUE = 10.0f;
 		
-		private List<Float> values;
+		private List<Double> values;
 		
 		private int dirty = 0;
 		
-		private float minValue = INIT_MIN_VALUE;
-		private float maxValue = INIT_MAX_VALUE;
-		private float deltaX;
+		private double minValue = INIT_MIN_VALUE;
+		private double maxValue = INIT_MAX_VALUE;
+		private double deltaX;
 		
 		private int width;
 		private int height;
@@ -42,10 +42,10 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.surfaceHolder = surfaceHolder;
 			this.context = context;
 			
-			this.values = new LinkedList<Float>();
+			this.values = new LinkedList<Double>();
 			
 			this.linePaint = new Paint();
-			linePaint.setAntiAlias(true);
+			//linePaint.setAntiAlias(true);
 			linePaint.setARGB(255, 255, 255, 0);
 			linePaint.setStrokeWidth(2);
 			
@@ -115,27 +115,19 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.deltaX = (float)this.width / MAX_VALUES;
 		}
 
-		public void addValue(float value)
+		public void addValue(double value)
 		{
-			if(this.values.size() == 0)
+			if(value < this.minValue)
 			{
 				this.minValue = value;
+			}
+			
+			if(value > this.maxValue)
+			{
 				this.maxValue = value;
 			}
-			else
-			{
-				if(value < this.minValue)
-				{
-					this.minValue = value;
-				}
-				
-				if(value > this.maxValue)
-				{
-					this.maxValue = value;
-				}
-			}
 
-			if(this.values.size() >= this.MAX_VALUES)
+			if(this.values.size() >= MAX_VALUES)
 			{
 				this.values.remove(0);
 			}
@@ -171,21 +163,21 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		
 		private Point getPoint(int index)
 		{
-			float value = this.values.get(index);
+			double value = this.values.get(index);
 
-			int x = (int)(this.deltaX * (float)index);
+			int x = (int)(this.deltaX * (double)index);
 			
 			return this.getPoint(value, x);
 		}
 		
-		private Point getPoint(float value, int x)
+		private Point getPoint(double value, int x)
 		{
 			int y = 0;
-			float diff = this.maxValue - this.minValue;
+			double diff = this.maxValue - this.minValue;
 
 			if(diff > 0)
 			{
-				y = (int)(((this.maxValue - value) / diff) * (float)this.height);
+				y = (int)(((this.maxValue - value) / diff) * (double)this.height);
 			}
 
 			return new Point(x, y);			
@@ -233,7 +225,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
         }		
 	}
 
-	public void setAcceleration(float acceleration) {
-		this.thread.addValue(acceleration);
+	public void addValue(double value) {
+		this.thread.addValue(value);
 	}
 }

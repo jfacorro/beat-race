@@ -3,6 +3,7 @@ package com.facorro.beatrace;
 
 public class BPMReader {
 	
+	private static final float NS2S = 1.0f / 1000000000.0f;
 	private long start;
 	private long end;
 	private boolean dirty;
@@ -33,7 +34,7 @@ public class BPMReader {
 	public float getLapse() {
 		if(this.dirty)
 		{
-			this.lapse = (float)(this.end - this.start) / 1000000000;
+			this.lapse = (float)(this.end - this.start) * NS2S;
 			this.dirty = false;
 		}
 	

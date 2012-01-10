@@ -17,7 +17,8 @@ import android.widget.TextView;
 public class SongPlayerActivity extends Activity implements SensorEventListener {
 	
 	private SensorManager sensorManager;
-	private Sensor accelerometer;
+	private Sensor accelerometerSensor;
+	private Sensor rotationSensor;
 	
 	private FMODAudioDevice mFMODAudioDevice = new FMODAudioDevice();
 	private String filename;
@@ -26,6 +27,9 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	
 	private float originalFrequency;
 	private float currentFrequency;
+	
+	private float [] rotationValues = new float[4];
+	private final float[] rotationMatrix = new float[16];
 	
 	private BPMReader bpmReader = new BPMReader();
 	
@@ -43,7 +47,13 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
         this.songView = (SongView)this.findViewById(R.id.songView);
         
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
-        this.accelerometer = this.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        this.accelerometerSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        this.rotationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        
+        rotationMatrix[ 0] = 1;
+        rotationMatrix[ 4] = 1;
+        rotationMatrix[ 8] = 1;
+        rotationMatrix[12] = 1;
 	}
 	
 	@Override
@@ -74,6 +84,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 		String message = "BPM: " + Float.toString(bpm);
 		message += "\n Sample Rate: " + Float.toString(this.currentFrequency);
 		message += "\n Tap BPM: " + Float.toString(this.bpmReader.getBpm());
+		message += " - Ratio: " + Float.toString(this.bpmReader.getBpm() / bpm);
     	this.txtBpm.setText(message);
 	}
 	
@@ -101,7 +112,8 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
     @Override
     protected void onResume() {
       super.onResume();
-      this.sensorManager.registerListener(this, this.accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+      this.sensorManager.registerListener(this, this.accelerometerSensor, 75000);
+      this.sensorManager.registerListener(this, this.rotationSensor, 75000);
     }
 
     @Override
@@ -109,7 +121,32 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
       super.onPause();
       this.sensorManager.unregisterListener(this);
     }
-	
+    
+	public void onAccuracyChanged(Sensor sensor, int accuracy) {
+		// TODO Auto-generated method stub		
+	}
+
+	public void onSensorChanged(SensorEvent event) {
+		if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+		{
+			if(event.values.length > 2)
+			{
+				float[] source = new float[4];
+				source[0] = event.values[0];
+				source[1] = event.values[1];
+				source[2] = event.values[2];
+				source[3] = 0;
+				float[] result = new float[4];
+				android.opengl.Matrix.multiplyMV(result, 0, this.rotationMatrix, 0, source, 0);
+				this.songView.addValue(result[2]);
+			}
+		}
+		else if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)
+		{
+            SensorManager.getRotationMatrixFromVector(this.rotationMatrix, event.values);
+		}
+	}
+
     static 
     {
     	System.loadLibrary("fmodex");
@@ -124,18 +161,4 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	public native void cSetFrequency(float freq);
 	public native float cGetBpm();
 	public native float cGetBpmSoFar();
-
-	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// TODO Auto-generated method stub		
-	}
-
-	public void onSensorChanged(SensorEvent event) {
-		if(event.sensor.getType() == this.accelerometer.getType())
-		{
-			if(event.values.length > 2)
-			{
-				this.songView.setAcceleration(event.values[2]);
-			}
-		}
-	}
 }
