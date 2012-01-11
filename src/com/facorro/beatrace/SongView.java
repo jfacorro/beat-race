@@ -14,6 +14,7 @@ import android.view.SurfaceView;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	class SongThread extends Thread {
+		private static final float TAP_THRESHOLD_VALUE = 2.0f;
 		private static final int MAX_VALUES = 50;
 		private static final double INIT_MIN_VALUE = -10.0f;
 		private static final double INIT_MAX_VALUE = 10.0f;
@@ -31,12 +32,13 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		
 		private boolean running;
 		
-		public Paint linePaint;
+		public Paint greenPaint;
+		public Paint yellowPaint;
 		public Paint bkgPaint;
 		
 		public SurfaceHolder surfaceHolder;
 		public Context context;
-		private int lastSlope;
+		private float lastSlope;
 		private double cycle;
 		private boolean beat;
 		
@@ -47,10 +49,15 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			
 			this.values = new LinkedList<Double>();
 			
-			this.linePaint = new Paint();
-			//linePaint.setAntiAlias(true);
-			linePaint.setARGB(255, 255, 255, 0);
-			linePaint.setStrokeWidth(2);
+			this.greenPaint = new Paint();
+			greenPaint.setAntiAlias(true);
+			greenPaint.setARGB(255, 0, 255, 0);
+			greenPaint.setStrokeWidth(2);
+			
+			this.yellowPaint = new Paint();
+			yellowPaint.setAntiAlias(true);
+			yellowPaint.setARGB(255, 255, 255, 0);
+			yellowPaint.setStrokeWidth(1);
 			
 			this.bkgPaint = new Paint();
 			bkgPaint.setARGB(255, 0, 0, 0);
@@ -88,21 +95,37 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			{
 				canvas.drawARGB(255, 0, 0, 0);
 				
-				//float [] points = new float[this.values.size()];
+				float[] points = new float[this.values.size() * 4];
 				
-				for (int index = 0; index + 2 < this.values.size(); index++)
+				Point p1 = null;
+				
+				for (int index = 0; index + 1 < this.values.size(); index++)
 				{
-					Point p1 = this.getPoint(index);
+					if(p1 == null) p1 = this.getPoint(index);
 					Point p2 = this.getPoint(index + 1);
-					//points[index]
+
+					int offset = index * 4;
+					points[offset] = p1.x;
+					points[offset + 1] = p1.y;
+					points[offset + 2] = p2.x;
+					points[offset + 3] = p2.y;
 					
-					canvas.drawLine(p1.x, p1.y, p2.x, p2.y, this.linePaint);
+					p1 = p2;
 				}
 				
-				Point zeroBegin = this.getPoint(0, 0);
-				Point zeroEnd = new Point(this.width, zeroBegin.y);
+				canvas.drawLines(points, this.greenPaint);
 				
-				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.linePaint);
+				Point zeroBegin = this.getPoint(0, 0);
+				Point zeroEnd = new Point(this.width, zeroBegin.y);				
+				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.greenPaint);
+				
+				zeroBegin = this.getPoint(TAP_THRESHOLD_VALUE, 0);
+				zeroEnd = new Point(this.width, zeroBegin.y);				
+				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.yellowPaint);
+				
+				zeroBegin = this.getPoint(-TAP_THRESHOLD_VALUE, 0);
+				zeroEnd = new Point(this.width, zeroBegin.y);				
+				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.yellowPaint);
 				
 				canvas.save();
 				
@@ -139,14 +162,26 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			
 			this.dirty = 2;
 			
-			this.detectCycle();
+			this.detectCycle(value);
 		}
 		
-		private void detectCycle() {
-			if(this.lastSlope != this.slope())
+		private void detectCycle(double value) {
+			float currentSlope = this.slope();
+			if(this.lastSlope != currentSlope)
 			{
-				this.lastSlope = this.slope();
-				this.cycle += 1;
+				if(
+					(this.lastSlope < 0 && value > TAP_THRESHOLD_VALUE) ||
+					(this.lastSlope > 0 && value < -TAP_THRESHOLD_VALUE)
+				)
+				{
+					this.lastSlope = currentSlope;
+					this.cycle += 1;
+				}
+				else if (this.lastSlope == 0)
+				{
+					this.lastSlope = currentSlope;
+				}
+					
 			}
 			
 			if(this.cycle == 2)
@@ -163,25 +198,14 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			return result;
 		}
 		
-		public int slope()
+		public float slope()
 		{
 			int count = this.values.size();
-			int slope = 0;
+			float slope = 0;
 			
-			if(count > 2)
+			if(count >= 2)
 			{
-				if(this.values.get(count - 1) > this.values.get(count - 2))
-				{
-					slope = 1;
-				}
-				else if(this.values.get(count - 1) < this.values.get(count - 2))
-				{
-					slope = -1;
-				}
-				else
-				{
-					slope = 0;
-				}
+				slope = (float)(this.values.get(count - 1) - this.values.get(count - 2));
 			}
 			
 			return slope;
@@ -221,11 +245,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
         holder.addCallback(this);
 
         // create thread only; it's started in surfaceCreated()
-        thread = new SongThread(holder, context, new Handler(){
-        	
-        });
-
-        //setFocusable(true); // make sure we get key events
+        thread = new SongThread(holder, context, null);
     }
 
 	public void surfaceChanged(SurfaceHolder arg0, int format, int width, int height) {
@@ -256,14 +276,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		this.thread.addValue(value);
 	}
 	
-	public int slope()
-	{
-		return this.thread.slope();
-	}
-
 	public boolean beat() {
 		return this.thread.beat();
 	}
-
-
 }

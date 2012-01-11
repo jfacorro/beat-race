@@ -1,5 +1,12 @@
 package com.facorro.beatrace;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
 import org.fmod.FMODAudioDevice;
 
 import android.app.Activity;
@@ -10,13 +17,12 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.view.MotionEvent;
+import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
 public class SongPlayerActivity extends Activity implements SensorEventListener {
-	private static final float TAP_THRESHOLD_VALUE = 6.0f;
-
 	/**
 	 * Sensors related API objects
 	 */
@@ -27,6 +33,8 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	private FMODAudioDevice mFMODAudioDevice = new FMODAudioDevice();
 	private String filename;
 	private TextView txtBpm;
+	
+	private BufferedWriter logFile;
 
 	/**
 	 * Object that contains both values and the drawing logic
@@ -38,6 +46,8 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	
 	private float [] rotationValues = new float[4];
 	private final float[] rotationMatrix = new float[16];
+	
+	private List<Float> log = new LinkedList<Float>(); 
 	
 	/**
 	 * Bpm Reader used to calculate the bpm based on taps
@@ -70,6 +80,17 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
         rotationMatrix[ 4] = 1;
         rotationMatrix[ 8] = 1;
         rotationMatrix[12] = 1;
+        
+		try {
+			File path = Environment.getExternalStorageDirectory();
+			File songfile = new File(this.filename);
+			File destination = new File(path, songfile.getName().replace(" ", "") + ".log");
+			
+			this.logFile = new BufferedWriter(new FileWriter(destination));
+		} catch (IOException e) {
+			Log.d("Error creating log file", e.getMessage());
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -101,19 +122,20 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 		message += "\n Tap BPM: " + Float.toString(userBpm);
 		message += " - Ratio: " + Float.toString(userBpm / bpm);
     	this.txtBpm.setText(message);
+    	
+    	log.add(bpm);
+    	log.add(userBpm);
+    	log.add(userBpm / bpm);
 	}
 	
 	private void detectUserBpm(float value)
 	{
-		if(!Float.isInfinite(value))
+		this.songView.addValue(value);
+		
+		if (this.songView.beat())
 		{
-			this.songView.addValue(value);
-			
-			if (this.songView.beat())
-			{
-				this.bpmReader.tap();
-				this.updateBpm();
-			}
+			this.bpmReader.tap();
+			this.updateBpm();
 		}
 	}
 	
@@ -132,8 +154,21 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
     public void onStop()
     {
     	cEnd();
-    	
     	mFMODAudioDevice.stop();
+    	
+		try {
+			for(int i = 0; i < this.log.size(); i += 3)
+			{
+				this.logFile.write(Float.toString(i / 3)+ ";");
+				this.logFile.write(Float.toString(this.log.get(i))+ ";");
+				this.logFile.write(Float.toString(this.log.get(i + 1))+ ";");
+				this.logFile.write(Float.toString(this.log.get(i + 2)) + "\n");
+			}
+			this.logFile.close();
+			Log.d("Wrote file", " and closed it.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
     	
     	super.onStop();
     }
@@ -163,9 +198,10 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 			source[1] = event.values[1];
 			source[2] = event.values[2];
 			source[3] = 0;
+			
 			float[] result = new float[4];
 			android.opengl.Matrix.multiplyMV(result, 0, this.rotationMatrix, 0, source, 0);
-			//this.songView.addValue(result[2]);
+
 			this.detectUserBpm(result[2]);
 		}
 		else if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)

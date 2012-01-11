@@ -5,6 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk android:minSdkVersion="10" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application
         android:icon="@drawable/ic_launcher"
@@ -22,7 +23,7 @@
                 <category android:name="android.intent.category.ALTERNATIVE"/>
             </intent-filter>
         </activity>
-        <activity android:name="com.facorro.beatrace.SongPlayerActivity"></activity>
+        <activity android:name="com.facorro.beatrace.SongPlayerActivity">
+        </activity>
     </application>
-
 </manifest>

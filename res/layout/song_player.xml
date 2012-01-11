@@ -14,14 +14,14 @@
 		    android:layout_width="100dp"
 		    android:layout_height="wrap_content"
 		    android:onClick="slower"
-		    android:text="SLOWER" />
+		    android:text="@string/slower" />
 		
 		<Button
 		    android:id="@+id/btnFaster"
 		    android:layout_width="100dp"
 		    android:layout_height="wrap_content"
 		    android:onClick="faster"
-		    android:text="FASTER" />
+		    android:text="@string/faster" />
 	</LinearLayout>
 	<TextView android:id="@+id/txtBpm"
 	    android:layout_width="fill_parent"
