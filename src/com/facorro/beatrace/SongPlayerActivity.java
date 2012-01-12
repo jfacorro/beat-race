@@ -22,7 +22,10 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-public class SongPlayerActivity extends Activity implements SensorEventListener {
+import com.facorro.beatrace.utils.BeatListener;
+
+public class SongPlayerActivity extends Activity implements SensorEventListener, BeatListener {
+	private final float GRAVITY_INVERSE = 1 / 9.8f;
 	/**
 	 * Sensors related API objects
 	 */
@@ -58,6 +61,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	 * Used for tapping detection
 	 */
 	private boolean tap = false;
+	private float[] gravity;
 	
 	/** Called when the activity is first created. */
 	public void onCreate(Bundle savedInstanceState) {
@@ -72,9 +76,11 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
         this.txtBpm = (TextView) this.findViewById(R.id.txtBpm);
         this.songView = (SongView)this.findViewById(R.id.songView);
         
+        this.songView.setBeatListener(this);
+        
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
-        this.accelerometerSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        this.rotationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        this.accelerometerSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        this.rotationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         
         rotationMatrix[ 0] = 1;
         rotationMatrix[ 4] = 1;
@@ -128,15 +134,10 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
     	log.add(userBpm / bpm);
 	}
 	
-	private void detectUserBpm(float value)
+	public void beat()
 	{
-		this.songView.addValue(value);
-		
-		if (this.songView.beat())
-		{
-			this.bpmReader.tap();
-			this.updateBpm();
-		}
+		this.bpmReader.tap();
+		this.updateBpm();
 	}
 	
     @Override
@@ -147,7 +148,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
     	mFMODAudioDevice.start();
     	
     	this.originalFrequency = cBegin(this.filename);
-    	this.currentFrequency = this.originalFrequency; 
+    	this.currentFrequency = this.originalFrequency;
     }
     
     @Override
@@ -169,15 +170,15 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-    	
+
     	super.onStop();
     }
     
     @Override
     protected void onResume() {
       super.onResume();
-      this.sensorManager.registerListener(this, this.accelerometerSensor, 60000);
-      this.sensorManager.registerListener(this, this.rotationSensor, 60000);
+      this.sensorManager.registerListener(this, this.accelerometerSensor, 75000);
+      this.sensorManager.registerListener(this, this.rotationSensor, 75000);
     }
 
     @Override
@@ -191,26 +192,27 @@ public class SongPlayerActivity extends Activity implements SensorEventListener 
 	}
 
 	public void onSensorChanged(SensorEvent event) {
-		if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+		if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
 		{
-			float[] source = new float[4];
-			source[0] = event.values[0];
-			source[1] = event.values[1];
-			source[2] = event.values[2];
-			source[3] = 0;
-			
-			float[] result = new float[4];
-			android.opengl.Matrix.multiplyMV(result, 0, this.rotationMatrix, 0, source, 0);
+			this.gravity = event.values.clone();
+		}
+		else if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
+		{
+			// Use gravity values to find out projection in the
+			// z axis.
+			float x = event.values[0] * this.gravity[0];
+			float y = event.values[1] * this.gravity[1];
+			float z = event.values[2] * this.gravity[2];
+			float value = (x + y + z) * GRAVITY_INVERSE;
 
-			this.detectUserBpm(result[2]);
-		}
-		else if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)
-		{
-            SensorManager.getRotationMatrixFromVector(this.rotationMatrix, event.values);
-		}
+			this.songView.addValue(value);
+		}			
 	}
 
-    static 
+    /**
+     * External JNI methods
+     */
+	static
     {
     	System.loadLibrary("fmodex");
         System.loadLibrary("main");

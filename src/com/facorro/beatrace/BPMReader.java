@@ -1,19 +1,24 @@
 package com.facorro.beatrace;
 
+import java.util.LinkedList;
+import java.util.List;
+
 
 public class BPMReader {
 	
 	private static final float NS2S = 1.0f / 1000000000.0f;
+	private static final float MAXVALUES = 5;
 	private long start;
 	private long end;
 	private boolean dirty;
+	private List<Float> lapseValues;
 	private float lapse;
 
 	public BPMReader() {
 		this.start = 0;
 		this.end = 0;
 		this.dirty = true;
-		this.lapse = 0;
+		this.lapseValues = new LinkedList<Float>();
 	}
 
 	public void tap() {
@@ -34,7 +39,20 @@ public class BPMReader {
 	public float getLapse() {
 		if(this.dirty)
 		{
-			this.lapse = (float)(this.end - this.start) * NS2S;
+			if(this.lapseValues.size() >= MAXVALUES)
+			{
+				this.lapseValues.remove(0);
+			}
+
+			this.lapseValues.add((float)(this.end - this.start) * NS2S);
+			
+			this.lapse = 0;
+			
+			for(float value : this.lapseValues)
+				this.lapse += value;
+			
+			this.lapse /= this.lapseValues.size();
+
 			this.dirty = false;
 		}
 	

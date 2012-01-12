@@ -3,6 +3,8 @@ package com.facorro.beatrace;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.facorro.beatrace.utils.BeatListener;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -14,8 +16,8 @@ import android.view.SurfaceView;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	class SongThread extends Thread {
-		private static final float TAP_THRESHOLD_VALUE = 2.0f;
-		private static final int MAX_VALUES = 50;
+		private static final float TAP_THRESHOLD_VALUE = 1.0f;
+		private static final int MAX_VALUES = 20;
 		private static final double INIT_MIN_VALUE = -10.0f;
 		private static final double INIT_MAX_VALUE = 10.0f;
 		
@@ -25,7 +27,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		
 		private double minValue = INIT_MIN_VALUE;
 		private double maxValue = INIT_MAX_VALUE;
-		private double deltaX;
+		private int deltaX;
 		
 		private int width;
 		private int height;
@@ -40,7 +42,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		public Context context;
 		private float lastSlope;
 		private double cycle;
-		private boolean beat;
+		private BeatListener beatListener;
 		
 		public SongThread(SurfaceHolder surfaceHolder, Context context,
                 Handler handler) {
@@ -95,25 +97,16 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			{
 				canvas.drawARGB(255, 0, 0, 0);
 				
-				float[] points = new float[this.values.size() * 4];
-				
 				Point p1 = null;
 				
 				for (int index = 0; index + 1 < this.values.size(); index++)
 				{
 					if(p1 == null) p1 = this.getPoint(index);
 					Point p2 = this.getPoint(index + 1);
+					canvas.drawLine(p1.x, p1.y, p2.x, p2.y, this.greenPaint);
 
-					int offset = index * 4;
-					points[offset] = p1.x;
-					points[offset + 1] = p1.y;
-					points[offset + 2] = p2.x;
-					points[offset + 3] = p2.y;
-					
 					p1 = p2;
 				}
-				
-				canvas.drawLines(points, this.greenPaint);
 				
 				Point zeroBegin = this.getPoint(0, 0);
 				Point zeroEnd = new Point(this.width, zeroBegin.y);				
@@ -138,7 +131,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.width = w;
 			this.height = h;
 			
-			this.deltaX = (float)this.width / MAX_VALUES;
+			this.deltaX = (int)this.width / MAX_VALUES;
 		}
 
 		public void addValue(double value)
@@ -181,21 +174,13 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 				{
 					this.lastSlope = currentSlope;
 				}
-					
 			}
 			
 			if(this.cycle == 2)
 			{
-				this.beat = true;
+				this.beatListener.beat();
 				this.cycle = 0;
 			}
-		}
-		
-		public boolean beat()
-		{
-			boolean result = this.beat;
-			this.beat = false;
-			return result;
 		}
 		
 		public float slope()
@@ -211,15 +196,28 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			return slope;
 		}
 		
+		/**
+		 * Finds the x and y coords for the nth value
+		 * in the values list.
+		 * @param index
+		 * @return Point object
+		 */
 		private Point getPoint(int index)
 		{
 			double value = this.values.get(index);
 
-			int x = (int)(this.deltaX * (double)index);
+			int x = (this.deltaX * index);
 			
 			return this.getPoint(value, x);
 		}
 		
+		/**
+		 * Finds the x and y coords for the nth value
+		 * in the values list.
+		 * @param value
+		 * @param x
+		 * @return
+		 */
 		private Point getPoint(double value, int x)
 		{
 			int y = 0;
@@ -231,6 +229,10 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			}
 
 			return new Point(x, y);			
+		}
+
+		public void setBeatListener(BeatListener beatListener) {
+			this.beatListener = beatListener;
 		}
 	}
 	
@@ -276,7 +278,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		this.thread.addValue(value);
 	}
 	
-	public boolean beat() {
-		return this.thread.beat();
+	public void setBeatListener(BeatListener beatListener) {
+		this.thread.setBeatListener(beatListener);
 	}
 }
