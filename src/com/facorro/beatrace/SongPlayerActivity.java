@@ -76,7 +76,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
         this.txtBpm = (TextView) this.findViewById(R.id.txtBpm);
         this.songView = (SongView)this.findViewById(R.id.songView);
         
-        this.songView.setBeatListener(this);
+        this.songView.getThread().setBeatListener(this);
         
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
         this.accelerometerSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
@@ -90,7 +90,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		try {
 			File path = Environment.getExternalStorageDirectory();
 			File songfile = new File(this.filename);
-			File destination = new File(path, songfile.getName().replace(" ", "") + ".log");
+			File destination = new File(path, songfile.getName().replace(" ", "") + ".csv");
 			
 			this.logFile = new BufferedWriter(new FileWriter(destination));
 		} catch (IOException e) {
@@ -121,17 +121,23 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	
 	private void updateBpm()
 	{
-		float bpm = cGetBpmSoFar();
+		float songBpm = cGetBpmSoFar();
 		float userBpm = this.bpmReader.getBpm();
-		String message = "BPM: " + Float.toString(bpm);
+
+		this.songView.getThread().setSongBpm(songBpm);
+		this.songView.getThread().setUserBpm(userBpm);
+		
+		/*
+		String message = "BPM: " + Float.toString(userBpm);
 		message += "\n Sample Rate: " + Float.toString(this.currentFrequency);
 		message += "\n Tap BPM: " + Float.toString(userBpm);
-		message += " - Ratio: " + Float.toString(userBpm / bpm);
+		message += " - Ratio: " + Float.toString(userBpm / userBpm);
     	this.txtBpm.setText(message);
+    	*/
     	
-    	log.add(bpm);
+    	log.add(songBpm);
     	log.add(userBpm);
-    	log.add(userBpm / bpm);
+    	log.add(userBpm / songBpm);
 	}
 	
 	public void beat()
@@ -160,10 +166,10 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		try {
 			for(int i = 0; i < this.log.size(); i += 3)
 			{
-				this.logFile.write(Float.toString(i / 3)+ ";");
-				this.logFile.write(Float.toString(this.log.get(i))+ ";");
-				this.logFile.write(Float.toString(this.log.get(i + 1))+ ";");
-				this.logFile.write(Float.toString(this.log.get(i + 2)) + "\n");
+				this.logFile.write(Integer.toString(i / 3)+ ";");
+				this.logFile.write(Float.toString(this.log.get(i)).replace(".", ",")+ ";");
+				this.logFile.write(Float.toString(this.log.get(i + 1)).replace(".", ",")+ ";");
+				this.logFile.write(Float.toString(this.log.get(i + 2)).replace(".", ",") + "\n");
 			}
 			this.logFile.close();
 			Log.d("Wrote file", " and closed it.");
@@ -205,7 +211,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 			float z = event.values[2] * this.gravity[2];
 			float value = (x + y + z) * GRAVITY_INVERSE;
 
-			this.songView.addValue(value);
+			this.songView.getThread().addValue(value);
 		}			
 	}
 

@@ -7,7 +7,8 @@ import java.util.List;
 public class BPMReader {
 	
 	private static final float NS2S = 1.0f / 1000000000.0f;
-	private static final float MAXVALUES = 5;
+	private static final int MAXVALUES = 10;
+	private static final int SECONDSINMINUTES = MAXVALUES * 60;
 	private long start;
 	private long end;
 	private boolean dirty;
@@ -41,18 +42,16 @@ public class BPMReader {
 		{
 			if(this.lapseValues.size() >= MAXVALUES)
 			{
+				this.lapse -= this.lapseValues.get(0);
 				this.lapseValues.remove(0);
 			}
+			
+			float lastValue = (float)(this.end - this.start) * NS2S;
 
-			this.lapseValues.add((float)(this.end - this.start) * NS2S);
+			this.lapseValues.add(lastValue);
 			
-			this.lapse = 0;
+			this.lapse += lastValue;
 			
-			for(float value : this.lapseValues)
-				this.lapse += value;
-			
-			this.lapse /= this.lapseValues.size();
-
 			this.dirty = false;
 		}
 	
@@ -61,7 +60,7 @@ public class BPMReader {
 	
 	public float getBpm() {
 		if(this.getLapse() > 0)
-			return 60 / this.getLapse();
+			return SECONDSINMINUTES / this.getLapse();
 		else
 			return 0;
 	}	

@@ -11,58 +11,60 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	class SongThread extends Thread {
-		private static final float TAP_THRESHOLD_VALUE = 1.0f;
+		private static final float TAP_THRESHOLD_VALUE = 2.0f;
 		private static final int MAX_VALUES = 20;
-		private static final double INIT_MIN_VALUE = -10.0f;
-		private static final double INIT_MAX_VALUE = 10.0f;
+		private static final float INIT_MIN_VALUE = -2.0f;
+		private static final float INIT_MAX_VALUE = 2.0f;
 		
-		private List<Double> values;
+		private List<Float> values;
 		
 		private int dirty = 0;
 		
-		private double minValue = INIT_MIN_VALUE;
-		private double maxValue = INIT_MAX_VALUE;
+		private float minValue = INIT_MIN_VALUE;
+		private float maxValue = INIT_MAX_VALUE;
+		private float mediumValue = (minValue + maxValue) / 2;
 		private int deltaX;
 		
 		private int width;
 		private int height;
 		
-		private boolean running;
+		private float songBpm;
+		private float userBpm;
 		
-		public Paint greenPaint;
-		public Paint yellowPaint;
-		public Paint bkgPaint;
-		
-		public SurfaceHolder surfaceHolder;
-		public Context context;
 		private float lastSlope;
 		private double cycle;
+		
+		private boolean running;
+		
+		private Paint greenPaint;
+		private Paint yellowPaint;
+		
+		private SurfaceHolder surfaceHolder;
+
 		private BeatListener beatListener;
 		
 		public SongThread(SurfaceHolder surfaceHolder, Context context,
                 Handler handler) {
 			this.surfaceHolder = surfaceHolder;
-			this.context = context;
 			
-			this.values = new LinkedList<Double>();
+			this.values = new LinkedList<Float>();
 			
 			this.greenPaint = new Paint();
 			greenPaint.setAntiAlias(true);
 			greenPaint.setARGB(255, 0, 255, 0);
-			greenPaint.setStrokeWidth(2);
+			greenPaint.setStrokeWidth(3);
 			
 			this.yellowPaint = new Paint();
 			yellowPaint.setAntiAlias(true);
 			yellowPaint.setARGB(255, 255, 255, 0);
 			yellowPaint.setStrokeWidth(1);
-			
-			this.bkgPaint = new Paint();
-			bkgPaint.setARGB(255, 0, 0, 0);
+			yellowPaint.setTextSize(20);
 		}
 		
 		@Override
@@ -97,28 +99,22 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			{
 				canvas.drawARGB(255, 0, 0, 0);
 				
-				Point p1 = null;
+				Point point = this.getPoint(this.values.get(this.values.size() - 1), 0);				
+				canvas.drawLine(point.x, point.y, this.width, point.y, this.greenPaint);
 				
-				for (int index = 0; index + 1 < this.values.size(); index++)
-				{
-					if(p1 == null) p1 = this.getPoint(index);
-					Point p2 = this.getPoint(index + 1);
-					canvas.drawLine(p1.x, p1.y, p2.x, p2.y, this.greenPaint);
-
-					p1 = p2;
-				}
+				// Draw line in the middle between max and min values
+				point = this.getPoint(this.mediumValue, 0);
+				canvas.drawLine(point.x, point.y, this.width, point.y, this.yellowPaint);
 				
-				Point zeroBegin = this.getPoint(0, 0);
-				Point zeroEnd = new Point(this.width, zeroBegin.y);				
-				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.greenPaint);
+				// Draw the treshold lines
+				point = this.getPoint(this.mediumValue + TAP_THRESHOLD_VALUE, 0);
+				canvas.drawLine(point.x, point.y, this.width, point.y, this.yellowPaint);
 				
-				zeroBegin = this.getPoint(TAP_THRESHOLD_VALUE, 0);
-				zeroEnd = new Point(this.width, zeroBegin.y);				
-				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.yellowPaint);
+				point = this.getPoint(this.mediumValue - TAP_THRESHOLD_VALUE, 0);
+				canvas.drawLine(point.x, point.y, this.width, point.y, this.yellowPaint);
 				
-				zeroBegin = this.getPoint(-TAP_THRESHOLD_VALUE, 0);
-				zeroEnd = new Point(this.width, zeroBegin.y);				
-				canvas.drawLine(zeroBegin.x, zeroBegin.y, zeroEnd.x, zeroEnd.y, this.yellowPaint);
+				canvas.drawText(Float.toString(this.userBpm), 0, 50, this.yellowPaint);
+				canvas.drawText(Float.toString(this.songBpm), 0, 20, this.yellowPaint);
 				
 				canvas.save();
 				
@@ -134,16 +130,17 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.deltaX = (int)this.width / MAX_VALUES;
 		}
 
-		public void addValue(double value)
+		public void addValue(float value)
 		{
 			if(value < this.minValue)
 			{
 				this.minValue = value;
+				this.updateMediumValue();
 			}
-			
-			if(value > this.maxValue)
+			else if(value > this.maxValue)
 			{
 				this.maxValue = value;
+				this.updateMediumValue();
 			}
 
 			if(this.values.size() >= MAX_VALUES)
@@ -158,13 +155,18 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			this.detectCycle(value);
 		}
 		
+		private void updateMediumValue()
+		{
+			this.mediumValue = (this.maxValue + this.minValue) / 2;
+		}
+		
 		private void detectCycle(double value) {
 			float currentSlope = this.slope();
 			if(this.lastSlope != currentSlope)
 			{
 				if(
-					(this.lastSlope < 0 && value > TAP_THRESHOLD_VALUE) ||
-					(this.lastSlope > 0 && value < -TAP_THRESHOLD_VALUE)
+					(this.lastSlope < 0 && value > this.mediumValue  + TAP_THRESHOLD_VALUE) ||
+					(this.lastSlope > 0 && value < this.mediumValue + -TAP_THRESHOLD_VALUE)
 				)
 				{
 					this.lastSlope = currentSlope;
@@ -234,6 +236,16 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		public void setBeatListener(BeatListener beatListener) {
 			this.beatListener = beatListener;
 		}
+		
+		public void setSongBpm(float bpm)
+		{
+			this.songBpm = bpm;
+		}
+		
+		public void setUserBpm(float bpm)
+		{
+			this.userBpm = bpm;
+		}
 	}
 	
 	/** The thread that actually draws the animation */
@@ -262,23 +274,20 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	}
 
 	public void surfaceDestroyed(SurfaceHolder arg0) {
-		
+		thread.setRunning(false);
+
 		boolean retry = true;
-		thread.setRunning(false);        
         while (retry) {
             try {
                 thread.join();
                 retry = false;
-            } catch (InterruptedException e) {
-            }
+            } 
+            catch (InterruptedException e) {}
         }		
 	}
-
-	public void addValue(double value) {
-		this.thread.addValue(value);
-	}
 	
-	public void setBeatListener(BeatListener beatListener) {
-		this.thread.setBeatListener(beatListener);
+	public SongThread getThread()
+	{
+		return this.thread;
 	}
 }
