@@ -16,11 +16,12 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
-import android.widget.TextView;
 
 import com.facorro.beatrace.utils.BeatListener;
 
@@ -30,12 +31,11 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	 * Sensors related API objects
 	 */
 	private SensorManager sensorManager;
-	private Sensor accelerometerSensor;
-	private Sensor rotationSensor;
+	private Sensor gravitySensor;
+	private Sensor linearAccelerationSensor;
 	
 	private FMODAudioDevice mFMODAudioDevice = new FMODAudioDevice();
 	private String filename;
-	private TextView txtBpm;
 	
 	private BufferedWriter logFile;
 
@@ -47,9 +47,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	private float originalFrequency;
 	private float currentFrequency;
 	
-	private float [] rotationValues = new float[4];
-	private final float[] rotationMatrix = new float[16];
-	
 	private List<Float> log = new LinkedList<Float>(); 
 	
 	/**
@@ -57,10 +54,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	 */
 	private BPMReader bpmReader = new BPMReader();
 
-	/**
-	 * Used for tapping detection
-	 */
-	private boolean tap = false;
 	private float[] gravity;
 	
 	/** Called when the activity is first created. */
@@ -73,19 +66,13 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
         this.filename = intent.getStringExtra("filename");
         this.filename = this.filename.replace("/mnt/", "/");
         
-        this.txtBpm = (TextView) this.findViewById(R.id.txtBpm);
         this.songView = (SongView)this.findViewById(R.id.songView);
         
         this.songView.getThread().setBeatListener(this);
         
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
-        this.accelerometerSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-        this.rotationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        
-        rotationMatrix[ 0] = 1;
-        rotationMatrix[ 4] = 1;
-        rotationMatrix[ 8] = 1;
-        rotationMatrix[12] = 1;
+        this.gravitySensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        this.linearAccelerationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         
 		try {
 			File path = Environment.getExternalStorageDirectory();
@@ -127,14 +114,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		this.songView.getThread().setSongBpm(songBpm);
 		this.songView.getThread().setUserBpm(userBpm);
 		
-		/*
-		String message = "BPM: " + Float.toString(userBpm);
-		message += "\n Sample Rate: " + Float.toString(this.currentFrequency);
-		message += "\n Tap BPM: " + Float.toString(userBpm);
-		message += " - Ratio: " + Float.toString(userBpm / userBpm);
-    	this.txtBpm.setText(message);
-    	*/
-    	
     	log.add(songBpm);
     	log.add(userBpm);
     	log.add(userBpm / songBpm);
@@ -144,6 +123,25 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	{
 		this.bpmReader.tap();
 		this.updateBpm();
+		this.playTone();
+	}
+	
+	public void playTone()
+	{
+		new Thread(){
+			public void run()
+			{
+				ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, ToneGenerator.MAX_VOLUME);
+				toneGenerator.startTone(ToneGenerator.TONE_DTMF_0);
+				try {
+					sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				toneGenerator.stopTone();
+			}
+		}.start();
 	}
 	
     @Override
@@ -183,8 +181,8 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
     @Override
     protected void onResume() {
       super.onResume();
-      this.sensorManager.registerListener(this, this.accelerometerSensor, 75000);
-      this.sensorManager.registerListener(this, this.rotationSensor, 75000);
+      this.sensorManager.registerListener(this, this.gravitySensor, 75000);
+      this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
     }
 
     @Override
@@ -232,4 +230,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	public native void cSetFrequency(float freq);
 	public native float cGetBpm();
 	public native float cGetBpmSoFar();
+	public native int cGetLengthInMilis();
+	public native int cGetPosition();
+	
 }

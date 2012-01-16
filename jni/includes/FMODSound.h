@@ -15,8 +15,6 @@ class FMODSound
 
     public:
 
-    //FMODSound(FMODSystem * sys, const char * filename);
-
     FMODSound(FMODSystem * sys, const char * filename, bool stream = true);
 
     ~FMODSound();
@@ -30,6 +28,10 @@ class FMODSound
     float getFrequency();
 
     unsigned int getLength();
+
+    unsigned int getLengthInMilis();
+
+    unsigned int getPosition();
 
     FMOD_MODE getMode();
 

@@ -3,17 +3,17 @@ package com.facorro.beatrace;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.facorro.beatrace.utils.BeatListener;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Paint.Align;
 import android.graphics.Point;
 import android.os.Handler;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+
+import com.facorro.beatrace.utils.BeatListener;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 	class SongThread extends Thread {
@@ -21,6 +21,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		private static final int MAX_VALUES = 20;
 		private static final float INIT_MIN_VALUE = -2.0f;
 		private static final float INIT_MAX_VALUE = 2.0f;
+		private static final float FONT_SIZE = 48.0f;
 		
 		private List<Float> values;
 		
@@ -64,7 +65,9 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 			yellowPaint.setAntiAlias(true);
 			yellowPaint.setARGB(255, 255, 255, 0);
 			yellowPaint.setStrokeWidth(1);
-			yellowPaint.setTextSize(20);
+
+			yellowPaint.setTextSize(FONT_SIZE);
+			yellowPaint.setTextAlign(Align.LEFT);
 		}
 		
 		@Override
@@ -113,8 +116,10 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 				point = this.getPoint(this.mediumValue - TAP_THRESHOLD_VALUE, 0);
 				canvas.drawLine(point.x, point.y, this.width, point.y, this.yellowPaint);
 				
-				canvas.drawText(Float.toString(this.userBpm), 0, 50, this.yellowPaint);
-				canvas.drawText(Float.toString(this.songBpm), 0, 20, this.yellowPaint);
+				// Draw bpm values
+				canvas.drawText(String.format("%10.2f", this.songBpm), 0, FONT_SIZE, this.yellowPaint);
+				canvas.drawText(String.format("%10.2f", this.userBpm), 0, FONT_SIZE * 2, this.yellowPaint);
+				canvas.drawText(String.format("%10.2f", this.userBpm / this.songBpm), 0, FONT_SIZE * 3, this.yellowPaint);
 				
 				canvas.save();
 				

@@ -54,6 +54,24 @@ unsigned int FMODSound::getLength()
     return length;
 }
 
+unsigned int FMODSound::getLengthInMilis()
+{
+    unsigned int length = 0;
+
+    FMODError::eval(FMOD_Sound_GetLength(this->fmod_sound, &length, FMOD_TIMEUNIT_MS));
+
+    return length;
+}
+
+unsigned int FMODSound::getPosition()
+{
+    unsigned int position = 0;
+
+    FMODError::eval(FMOD_Channel_GetPosition(this->fmod_channel, &position, FMOD_TIMEUNIT_MS));
+
+    return position;
+}
+
 FMOD_MODE FMODSound::getMode()
 {
     FMOD_MODE mode;

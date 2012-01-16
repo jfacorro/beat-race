@@ -41,7 +41,7 @@
 #undef HAVE_UNISTD_H
 
 /* Use Integer as Sample type */
-#undef INTEGER_SAMPLES
+//#undef INTEGER_SAMPLES
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */

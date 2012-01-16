@@ -73,6 +73,21 @@ void Java_com_facorro_beatrace_SongPlayerActivity_cSetFrequency(JNIEnv *env, job
 	sound->setFrequency(freq);
 }
 
+void Java_com_facorro_beatrace_SongPlayerActivity_cGetLength(JNIEnv *env, jobject thiz)
+{
+	sound->getLength();
+}
+
+jint Java_com_facorro_beatrace_SongPlayerActivity_cGetLengthInMilis(JNIEnv *env, jobject thiz)
+{
+	return sound->getLengthInMilis();
+}
+
+jint Java_com_facorro_beatrace_SongPlayerActivity_cGetPosition(JNIEnv *env, jobject thiz)
+{
+	return sound->getPosition();
+}
+
 jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpmSoFar(JNIEnv *env, jobject thiz)
 {
 	return dsp->getBpmSoFar();

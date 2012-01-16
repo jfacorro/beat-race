@@ -8,7 +8,7 @@ public class BPMReader {
 	
 	private static final float NS2S = 1.0f / 1000000000.0f;
 	private static final int MAXVALUES = 10;
-	private static final int SECONDSINMINUTES = MAXVALUES * 60;
+	private static final int SECONDS_IN_MINUTES = MAXVALUES * 60;
 	private long start;
 	private long end;
 	private boolean dirty;
@@ -20,17 +20,16 @@ public class BPMReader {
 		this.end = 0;
 		this.dirty = true;
 		this.lapseValues = new LinkedList<Float>();
+		this.lapse = 0;
 	}
 
 	public void tap() {
 		long instant = System.nanoTime();
 
-		if(this.start == 0) {
+		if(this.start == 0)
 			this.start = instant;
-		}
-		else {
+		else
 			this.start = this.end;
-		}
 	
 		this.end = instant;
 		/// Indicate that the lapse has to be recalculated
@@ -59,8 +58,10 @@ public class BPMReader {
 	}
 	
 	public float getBpm() {
-		if(this.getLapse() > 0)
-			return SECONDSINMINUTES / this.getLapse();
+		float lapse = this.getLapse();
+
+		if(lapse > 0)
+			return SECONDS_IN_MINUTES / lapse;
 		else
 			return 0;
 	}	
