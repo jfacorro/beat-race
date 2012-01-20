@@ -33,70 +33,91 @@ extern "C" {
 
 FMODSystem	*sys;
 FMODSound	*sound;
-FMODDspBpm	*dsp;
 
-jfloat Java_com_facorro_beatrace_SongPlayerActivity_cBegin(JNIEnv *env, jobject thiz, jstring jfilename)
+void Java_com_facorro_beatrace_fmod_System_cInit(JNIEnv *env, jobject thiz)
 {
-	const char *filename;
-	filename = env->GetStringUTFChars(jfilename, NULL);
-
 	sys = new FMODSystem();
 	sys->init();
-
-	sound = new FMODSound(sys, filename, true);
-	dsp = new FMODDspBpm(sys, sound);
-
-	sound->play();
-
-	return sound->getFrequency();
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cUpdate(JNIEnv *env, jobject thiz)
+void Java_com_facorro_beatrace_fmod_System_cUpdate(JNIEnv *env, jobject thiz)
 {
 	sys->update();
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cEnd(JNIEnv *env, jobject thiz)
+void Java_com_facorro_beatrace_fmod_System_cStop(JNIEnv *env, jobject thiz)
 {
-	delete sound;
-	delete dsp;
 	delete sys;
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cPause(JNIEnv *env, jobject thiz)
+/**
+ * Sound wrapper methods
+ */
+jfloat Java_com_facorro_beatrace_fmod_Sound_cOpen(JNIEnv *env, jobject thiz, jstring jfilename)
+{
+	const char *filename;
+	filename = env->GetStringUTFChars(jfilename, NULL);
+
+	sound = new FMODSound(sys, filename, true);
+
+	return sound->getFrequency();
+}
+
+jfloat Java_com_facorro_beatrace_fmod_Sound_cClose(JNIEnv *env, jobject thiz, jstring jfilename)
+{
+	delete sound;
+}
+
+void Java_com_facorro_beatrace_fmod_Sound_cPlay(JNIEnv *env, jobject thiz)
+{
+	sound->play();
+}
+
+void Java_com_facorro_beatrace_fmod_Sound_cPause(JNIEnv *env, jobject thiz)
 {
 	sound->pause();
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cSetFrequency(JNIEnv *env, jobject thiz, jfloat freq)
+jfloat Java_com_facorro_beatrace_fmod_Sound_cGetFrequency(JNIEnv *env, jobject thiz)
+{
+	sound->getFrequency();
+}
+
+void Java_com_facorro_beatrace_fmod_Sound_cSetFrequency(JNIEnv *env, jobject thiz, jfloat freq)
 {
 	sound->setFrequency(freq);
 }
 
-void Java_com_facorro_beatrace_SongPlayerActivity_cGetLength(JNIEnv *env, jobject thiz)
+void Java_com_facorro_beatrace_fmod_Sound_cGetSize(JNIEnv *env, jobject thiz)
+{
+	sound->getSize();
+}
+
+void Java_com_facorro_beatrace_fmod_Sound_cGetRead(JNIEnv *env, jobject thiz)
+{
+	sound->getRead();
+}
+
+void Java_com_facorro_beatrace_fmod_Sound_cGetLength(JNIEnv *env, jobject thiz)
 {
 	sound->getLength();
 }
 
-jint Java_com_facorro_beatrace_SongPlayerActivity_cGetLengthInMilis(JNIEnv *env, jobject thiz)
+jint Java_com_facorro_beatrace_fmod_Sound_cGetLengthInMilis(JNIEnv *env, jobject thiz)
 {
 	return sound->getLengthInMilis();
 }
 
-jint Java_com_facorro_beatrace_SongPlayerActivity_cGetPosition(JNIEnv *env, jobject thiz)
+jint Java_com_facorro_beatrace_fmod_Sound_cGetPosition(JNIEnv *env, jobject thiz)
 {
 	return sound->getPosition();
 }
 
-jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpmSoFar(JNIEnv *env, jobject thiz)
-{
-	return dsp->getBpmSoFar();
-}
+unsigned int enoughSamples = 0;
+unsigned int samplesTotal = 0;
 
-jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject thiz)
+jfloat Java_com_facorro_beatrace_fmod_Sound_cGetBpm(JNIEnv *env, jobject thiz)
 {
-	__android_log_print(ANDROID_LOG_ERROR, "fmod", "Starting Bpm Extraction...");
-
     int channels = sound->getChannels();
     int numBytes = sizeof(SAMPLETYPE);
 
@@ -110,9 +131,8 @@ jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject
 
     unsigned int read = 0;
     unsigned int readTotal = 0;
-    unsigned int samplesTotal = 0;
-    unsigned int enoughSamples = bpm.windowLen * 2500;
-
+    samplesTotal = 0;
+    enoughSamples = bpm.windowLen * 2500;
 
     while(!done)
     {
@@ -130,8 +150,6 @@ jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject
 
         bpm.inputSamples(samples, numsamples / channels);
 
-    	__android_log_print(ANDROID_LOG_ERROR, "fmod", "Calculating Bpm... # read: %d - Window: %d", samplesTotal, bpm.windowLen);
-
         readTotal += read;
 
         if(
@@ -143,13 +161,21 @@ jfloat Java_com_facorro_beatrace_SongPlayerActivity_cGetBpm(JNIEnv *env, jobject
         }
     }
 
-    __android_log_print(ANDROID_LOG_ERROR, "fmod", "Total Bytes Read: (%d)", readTotal);
-
     sound->seekData(0);
 
     delete buffer;
 
     return bpm.getBpm();
+}
+
+jint Java_com_facorro_beatrace_fmod_Sound_cGetEnoughSamples(JNIEnv *env, jobject thiz)
+{
+	return enoughSamples;
+}
+
+jint Java_com_facorro_beatrace_fmod_Sound_cGetProcessedSamples(JNIEnv *env, jobject thiz)
+{
+	return samplesTotal;
 }
 
 #ifdef __cplusplus

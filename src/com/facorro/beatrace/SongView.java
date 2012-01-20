@@ -209,6 +209,7 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
 		 * @param index
 		 * @return Point object
 		 */
+		@SuppressWarnings("unused")
 		private Point getPoint(int index)
 		{
 			double value = this.values.get(index);

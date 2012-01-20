@@ -7,11 +7,9 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.fmod.FMODAudioDevice;
-
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -20,13 +18,27 @@ import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.Log;
 import android.view.View;
 
+import com.facorro.beatrace.fmod.Sound;
+import com.facorro.beatrace.fmod.System;
+import com.facorro.beatrace.utils.BPMReader;
 import com.facorro.beatrace.utils.BeatListener;
 
 public class SongPlayerActivity extends Activity implements SensorEventListener, BeatListener {
+	
+	public enum SongPlayerState {
+		INITIALIZING,
+		LOADING_SONG,
+		CALCULATING_BPM,
+		PLAYING_SONG,
+		FINISHED_SONG,
+		STOPPING
+	}
+	
 	private final float GRAVITY_INVERSE = 1 / 9.8f;
+	
+	ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, 75);
 	/**
 	 * Sensors related API objects
 	 */
@@ -34,18 +46,14 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	private Sensor gravitySensor;
 	private Sensor linearAccelerationSensor;
 	
-	private FMODAudioDevice mFMODAudioDevice = new FMODAudioDevice();
 	private String filename;
 	
-	private BufferedWriter logFile;
-
 	/**
 	 * Object that contains both values and the drawing logic
 	 */
 	private SongView songView;
 	
 	private float originalFrequency;
-	private float currentFrequency;
 	
 	private List<Float> log = new LinkedList<Float>(); 
 	
@@ -55,36 +63,98 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	private BPMReader bpmReader = new BPMReader();
 
 	private float[] gravity;
+	private float songBpm;
+	private float userBpm;
+	private System fmodSystem = new com.facorro.beatrace.fmod.System();
+	private Sound sound;
+	
+	private SongPlayerState state = SongPlayerState.INITIALIZING;
 	
 	/** Called when the activity is first created. */
+	@Override
 	public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.song_player);
         
-        Intent intent = this.getIntent();
-        this.filename = intent.getStringExtra("filename");
+        // Get filename from intent data
+        this.filename = this.getIntent().getStringExtra("filename");
         this.filename = this.filename.replace("/mnt/", "/");
-        
+        // Get song view instance from layout
         this.songView = (SongView)this.findViewById(R.id.songView);
-        
         this.songView.getThread().setBeatListener(this);
         
+        // Find needed sensors to detect beat while running
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
         this.gravitySensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
         this.linearAccelerationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         
-		try {
+        this.state = SongPlayerState.LOADING_SONG;
+        // Initialize FMOD system, load song and get BPM
+        this.fmodSystem.init();
+    	this.sound = new Sound(this.filename);
+    	this.sound.open();
+		this.originalFrequency = this.sound.getFrequency();
+		
+		this.calculateBpm();
+	}
+	
+    @Override
+    public void onStop()
+    {
+    	this.state = SongPlayerState.STOPPING;
+
+    	this.fmodSystem.stop();
+    	
+		// Create log file for song    	
+		try 
+		{
 			File path = Environment.getExternalStorageDirectory();
 			File songfile = new File(this.filename);
 			File destination = new File(path, songfile.getName().replace(" ", "") + ".csv");
-			
-			this.logFile = new BufferedWriter(new FileWriter(destination));
-		} catch (IOException e) {
-			Log.d("Error creating log file", e.getMessage());
+			BufferedWriter logFile = new BufferedWriter(new FileWriter(destination));
+
+			for(int i = 0; i < this.log.size(); i += 3)
+			{
+				logFile.write(Integer.toString(i / 3)+ ";");
+				logFile.write(Float.toString(this.log.get(i)).replace(".", ",")+ ";");
+				logFile.write(Float.toString(this.log.get(i + 1)).replace(".", ",")+ ";");
+				logFile.write(Float.toString(this.log.get(i + 2)).replace(".", ",") + "\n");
+			}
+
+			logFile.close();
+		} 
+		catch (IOException e) 
+		{
 			e.printStackTrace();
 		}
-	}
+
+    	super.onStop();
+    }
+    
+    @Override
+    protected void onResume() 
+    {
+    	super.onResume();
+    	
+    	this.registerSensorListeners();      
+    }
+    
+    private void registerSensorListeners()
+    {
+    	if(this.state == SongPlayerState.PLAYING_SONG)
+        {
+    		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
+    		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+		super.onPause();
+
+		this.sensorManager.unregisterListener(this);
+    }
 	
 	/**
 	 * Slows down the song
@@ -92,8 +162,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	 */
 	public void slower(View view)
 	{
-		this.currentFrequency -= 100;
-		cSetFrequency(this.currentFrequency);
+		this.sound.setFrequency(this.sound.getFrequency() - 100);
 	}
 	
 	/**
@@ -102,41 +171,36 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	 */
 	public void faster(View view)
 	{
-		this.currentFrequency += 100;
-		cSetFrequency(this.currentFrequency);
+		this.sound.setFrequency(this.sound.getFrequency() + 100);
 	}
 	
 	private void updateBpm()
 	{
-		float songBpm = cGetBpmSoFar();
-		float userBpm = this.bpmReader.getBpm();
-
-		this.songView.getThread().setSongBpm(songBpm);
-		this.songView.getThread().setUserBpm(userBpm);
+		this.userBpm = this.bpmReader.getBpm();
+		this.songView.getThread().setUserBpm(this.userBpm);
 		
-    	log.add(songBpm);
-    	log.add(userBpm);
-    	log.add(userBpm / songBpm);
+    	log.add(this.songBpm);
+    	log.add(this.userBpm);
+    	log.add(this.userBpm / this.songBpm);
 	}
 	
 	public void beat()
 	{
 		this.bpmReader.tap();
-		this.updateBpm();
 		this.playTone();
+		this.updateBpm();
 	}
 	
 	public void playTone()
 	{
 		new Thread(){
+			@Override
 			public void run()
 			{
-				ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, ToneGenerator.MAX_VOLUME);
 				toneGenerator.startTone(ToneGenerator.TONE_DTMF_0);
 				try {
 					sleep(100);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				toneGenerator.stopTone();
@@ -144,55 +208,54 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		}.start();
 	}
 	
-    @Override
-    public void onStart()
+    public void calculateBpm()
     {
-    	super.onStart();
+    	new Thread() {
+    		public void run() {
+    			state = SongPlayerState.CALCULATING_BPM;
+    	    	songBpm = sound.getBpm();
+    			songView.getThread().setSongBpm(songBpm);
+    			sound.play();
+    			state = SongPlayerState.PLAYING_SONG;
+    			registerSensorListeners();
+    		}
+    	}.start();
     	
-    	mFMODAudioDevice.start();
+    	// Create progress dialog.
+    	final ProgressDialog mProgressDialog = new ProgressDialog(SongPlayerActivity.this);    	
+    	mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mProgressDialog.setMax(100);
+		mProgressDialog.show();
     	
-    	this.originalFrequency = cBegin(this.filename);
-    	this.currentFrequency = this.originalFrequency;
-    }
-    
-    @Override
-    public void onStop()
-    {
-    	cEnd();
-    	mFMODAudioDevice.stop();
-    	
-		try {
-			for(int i = 0; i < this.log.size(); i += 3)
-			{
-				this.logFile.write(Integer.toString(i / 3)+ ";");
-				this.logFile.write(Float.toString(this.log.get(i)).replace(".", ",")+ ";");
-				this.logFile.write(Float.toString(this.log.get(i + 1)).replace(".", ",")+ ";");
-				this.logFile.write(Float.toString(this.log.get(i + 2)).replace(".", ",") + "\n");
-			}
-			this.logFile.close();
-			Log.d("Wrote file", " and closed it.");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+    	new Thread() {
+    		public void run() {
+    			int total = Sound.getEnoughSamples();
+    			int read = 0;
+    			int completed = 0;
 
-    	super.onStop();
-    }
-    
-    @Override
-    protected void onResume() {
-      super.onResume();
-      this.sensorManager.registerListener(this, this.gravitySensor, 75000);
-      this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
-    }
+    			while(completed < 100 && mProgressDialog.isShowing())
+    			{
+    				try 
+    				{
+	    				completed = read * 100 / total;
+	    				mProgressDialog.setProgress(completed);	
+	    				read = Sound.getProcessedSamples();
 
-    @Override
-    protected void onPause() {
-      super.onPause();
-      this.sensorManager.unregisterListener(this);
+						sleep(500);
+					} 
+    				catch (InterruptedException e) 
+    				{
+						e.printStackTrace();
+					}
+    			}
+
+    			mProgressDialog.dismiss();
+    		};
+    	}.start();
     }
     
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// TODO Auto-generated method stub		
+		// TODO Auto-generated method stub
 	}
 
 	public void onSensorChanged(SensorEvent event) {
@@ -212,25 +275,4 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 			this.songView.getThread().addValue(value);
 		}			
 	}
-
-    /**
-     * External JNI methods
-     */
-	static
-    {
-    	System.loadLibrary("fmodex");
-        System.loadLibrary("main");
-    }
-    
-	public native float cBegin(String filename);
-	public native void cUpdate();
-	public native void cEnd();
-	public native void cPause();
-	public native boolean cGetPaused();
-	public native void cSetFrequency(float freq);
-	public native float cGetBpm();
-	public native float cGetBpmSoFar();
-	public native int cGetLengthInMilis();
-	public native int cGetPosition();
-	
 }

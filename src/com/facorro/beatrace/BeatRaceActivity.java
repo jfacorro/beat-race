@@ -14,7 +14,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 
-public class RythmRaceActivity extends Activity implements TextWatcher
+public class BeatRaceActivity extends Activity implements TextWatcher
 {    
 	private SimpleCursorAdapter songsAdapter;
 	private ListView lstSongs;
@@ -51,11 +51,11 @@ public class RythmRaceActivity extends Activity implements TextWatcher
     	
     	String filename = cursor.getString(dataIndex);
     	
-    	Intent playSongIntent = new Intent(RythmRaceActivity.this, SongPlayerActivity.class);
+    	Intent playSongIntent = new Intent(BeatRaceActivity.this, SongPlayerActivity.class);
     	
     	playSongIntent.putExtra("filename", filename);
     	
-    	RythmRaceActivity.this.startActivity(playSongIntent); 
+    	BeatRaceActivity.this.startActivity(playSongIntent); 
     }
     
     /**

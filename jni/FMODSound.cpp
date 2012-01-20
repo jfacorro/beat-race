@@ -6,7 +6,9 @@
 
 FMODSound::FMODSound(FMODSystem * sys, const char * filename, bool stream)
 {
-    FMOD_MODE mode = stream ? FMOD_CREATESTREAM : FMOD_CREATESAMPLE;
+    this->readBytes = 0;
+
+	FMOD_MODE mode = stream ? FMOD_CREATESTREAM : FMOD_CREATESAMPLE;
     mode = mode | FMOD_SOFTWARE | FMOD_OPENONLY;
 
     this->fmod_system = sys->getSystem();
@@ -43,6 +45,20 @@ float FMODSound::getFrequency()
     FMODError::eval(FMOD_Channel_GetFrequency(this->fmod_channel, &freq));
 
     return freq;
+}
+
+unsigned int FMODSound::getSize()
+{
+    unsigned int length = 0;
+
+    FMODError::eval(FMOD_Sound_GetLength(this->fmod_sound, &length, FMOD_TIMEUNIT_RAWBYTES));
+
+    return length;
+}
+
+unsigned int FMODSound::getRead()
+{
+    return this->readBytes;
 }
 
 unsigned int FMODSound::getLength()
@@ -111,12 +127,16 @@ unsigned int FMODSound::readData(void * buffer, unsigned int length)
         FMODError::eval(result);
     }
 
+    this->readBytes += read;
+
     return read;
 }
 
 void FMODSound::seekData(unsigned int position)
 {
     FMOD_Sound_SeekData(this->fmod_sound, position);
+
+    this->readBytes = position;
 }
 
 #endif

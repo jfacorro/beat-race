@@ -12,6 +12,7 @@ class FMODSound
     FMOD_SOUND * fmod_sound;
     FMOD_CHANNEL * fmod_channel;
     FMOD_SYSTEM * fmod_system;
+    unsigned int readBytes;
 
     public:
 
@@ -26,6 +27,10 @@ class FMODSound
     void setFrequency(float freq);
 
     float getFrequency();
+
+    unsigned int getSize();
+
+    unsigned int getRead();
 
     unsigned int getLength();
 
