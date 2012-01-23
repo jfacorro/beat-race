@@ -1,7 +1,5 @@
 package com.facorro.beatrace.utils;
 
-public interface BeatListener {
-	
+public interface BeatListener {	
 	void beat();
-
 }

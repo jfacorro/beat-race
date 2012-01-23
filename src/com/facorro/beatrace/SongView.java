@@ -13,10 +13,11 @@ import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import com.facorro.beatrace.utils.BeatDetection;
 import com.facorro.beatrace.utils.BeatListener;
 
 public class SongView extends SurfaceView implements SurfaceHolder.Callback {
-	class SongThread extends Thread {
+	class SongThread extends Thread implements BeatDetection {
 		private static final float TAP_THRESHOLD_VALUE = 2.0f;
 		private static final int MAX_VALUES = 20;
 		private static final float INIT_MIN_VALUE = -2.0f;
@@ -276,7 +277,10 @@ public class SongView extends SurfaceView implements SurfaceHolder.Callback {
         // start the thread here so that we don't busy-wait in run()
         // waiting for the surface to be created
 		thread.setRunning(true);
-        thread.start();
+		if(!thread.isAlive())
+		{
+			thread.start();
+		}
 	}
 
 	public void surfaceDestroyed(SurfaceHolder arg0) {

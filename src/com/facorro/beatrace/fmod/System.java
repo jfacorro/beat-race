@@ -36,7 +36,7 @@ public class System {
     	java.lang.System.loadLibrary("main");
     }
 
-	public native void cInit();
-	public native void cUpdate();
-	public native void cStop();
+	private native void cInit();
+	private native void cUpdate();
+	private native void cStop();
 }

@@ -63,7 +63,7 @@ public class Sound {
 		return cGetPosition();
 	}
 	
-	private void close()
+	public void close()
 	{
 		cClose();
 	}
@@ -93,18 +93,18 @@ public class Sound {
     	java.lang.System.loadLibrary("main");
     }
 
-	public native void cOpen(String filename);
-	public native void cClose();
-	public native void cPlay();
-	public native void cPause();
-	public native void cSetFrequency(float freq);
-	public native float cGetFrequency();
-	public native float cGetBpm();
-	public native int cGetRead();
-	public native int cGetLength();
-	public native int cGetLengthInMilis();
-	public native int cGetPosition();
-	public static native int cGetEnoughSamples();
-	public static native int cGetProcessedSamples();
+	private native void cOpen(String filename);
+	private native void cClose();
+	private native void cPlay();
+	private native void cPause();
+	private native void cSetFrequency(float freq);
+	private native float cGetFrequency();
+	private native float cGetBpm();
+	private native int cGetRead();
+	private native int cGetLength();
+	private native int cGetLengthInMilis();
+	private native int cGetPosition();
+	private static native int cGetEnoughSamples();
+	private static native int cGetProcessedSamples();
 	
 }

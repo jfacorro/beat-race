@@ -4,8 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class BPMReader {
-	
+public class BeatCounter {	
 	private static final float NS2S = 1.0f / 1000000000.0f;
 	private static final int HISTORY_VALUES = 20;
 	private static final int SECONDS_IN_MINUTES = HISTORY_VALUES * 60;
@@ -15,7 +14,7 @@ public class BPMReader {
 	private List<Float> lapseValues;
 	private float lapse;
 
-	public BPMReader() {
+	public BeatCounter() {
 		this.start = 0;
 		this.end = 0;
 		this.dirty = true;

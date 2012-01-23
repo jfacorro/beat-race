@@ -19,10 +19,11 @@ import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
+import android.widget.Toast;
 
 import com.facorro.beatrace.fmod.Sound;
 import com.facorro.beatrace.fmod.System;
-import com.facorro.beatrace.utils.BPMReader;
+import com.facorro.beatrace.utils.BeatCounter;
 import com.facorro.beatrace.utils.BeatListener;
 
 public class SongPlayerActivity extends Activity implements SensorEventListener, BeatListener {
@@ -60,7 +61,7 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	/**
 	 * Bpm Reader used to calculate the bpm based on taps
 	 */
-	private BPMReader bpmReader = new BPMReader();
+	private BeatCounter bpmReader = new BeatCounter();
 
 	private float[] gravity;
 	private float songBpm;
@@ -72,8 +73,11 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	
 	/** Called when the activity is first created. */
 	@Override
-	public void onCreate(Bundle savedInstanceState) {
+	public void onCreate(Bundle savedInstanceState) 
+	{
         super.onCreate(savedInstanceState);
+        
+        Toast.makeText(this, "Create event...", Toast.LENGTH_SHORT).show();
 
         setContentView(R.layout.song_player);
         
@@ -100,12 +104,53 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	}
 	
     @Override
+    protected void onResume() 
+    {
+    	super.onResume();
+    	
+    	Toast.makeText(this, "Resume event...", Toast.LENGTH_SHORT).show();
+    	
+    	this.registerSensorListeners();      
+    }
+    
+    private void registerSensorListeners()
+    {
+    	if(this.state == SongPlayerState.PLAYING_SONG)
+        {
+    		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
+    		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
+        }
+    }
+
+    @Override
+    protected void onPause()
+    {
+		super.onPause();
+		
+		Toast.makeText(this, "Pause event...", Toast.LENGTH_SHORT).show();
+
+		this.sensorManager.unregisterListener(this);
+    }
+    
+    @Override
     public void onStop()
     {
-    	this.state = SongPlayerState.STOPPING;
+    	super.onStop();
 
+    	Toast.makeText(this, "Stop event...", Toast.LENGTH_SHORT).show();
+    }
+    
+    @Override
+    protected void onDestroy() 
+    {
+    	super.onDestroy();
+    	
+    	Toast.makeText(this, "Destroy event...", Toast.LENGTH_SHORT).show();
+    	
     	this.fmodSystem.stop();
     	
+    	this.state = SongPlayerState.STOPPING;
+
 		// Create log file for song    	
 		try 
 		{
@@ -128,32 +173,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		{
 			e.printStackTrace();
 		}
-
-    	super.onStop();
-    }
-    
-    @Override
-    protected void onResume() 
-    {
-    	super.onResume();
-    	
-    	this.registerSensorListeners();      
-    }
-    
-    private void registerSensorListeners()
-    {
-    	if(this.state == SongPlayerState.PLAYING_SONG)
-        {
-    		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
-    		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-		super.onPause();
-
-		this.sensorManager.unregisterListener(this);
     }
 	
 	/**
@@ -193,42 +212,43 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	
 	public void playTone()
 	{
-		new Thread(){
-			@Override
-			public void run()
-			{
+		Thread toneThread = new Thread(new Runnable() {
+			public void run() {
 				toneGenerator.startTone(ToneGenerator.TONE_DTMF_0);
 				try {
-					sleep(100);
+					Thread.sleep(100);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 				toneGenerator.stopTone();
 			}
-		}.start();
+		});
+		
+		toneThread.start();
 	}
 	
     public void calculateBpm()
     {
-    	new Thread() {
-    		public void run() {
+    	Thread calcBpmThread = new Thread(new Runnable() {
+			
+			public void run() {
     			state = SongPlayerState.CALCULATING_BPM;
     	    	songBpm = sound.getBpm();
     			songView.getThread().setSongBpm(songBpm);
     			sound.play();
     			state = SongPlayerState.PLAYING_SONG;
     			registerSensorListeners();
-    		}
-    	}.start();
+				
+			}
+		});
     	
     	// Create progress dialog.
     	final ProgressDialog mProgressDialog = new ProgressDialog(SongPlayerActivity.this);    	
     	mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mProgressDialog.setMax(100);
-		mProgressDialog.show();
-    	
-    	new Thread() {
-    		public void run() {
+		
+		Thread updateProgressThread = new Thread(new Runnable() {			
+			public void run() {
     			int total = Sound.getEnoughSamples();
     			int read = 0;
     			int completed = 0;
@@ -241,17 +261,22 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	    				mProgressDialog.setProgress(completed);	
 	    				read = Sound.getProcessedSamples();
 
-						sleep(500);
+						Thread.sleep(500);
 					} 
     				catch (InterruptedException e) 
     				{
 						e.printStackTrace();
 					}
     			}
+    			mProgressDialog.dismiss();				
+			}
+		});
 
-    			mProgressDialog.dismiss();
-    		};
-    	}.start();
+    	Toast.makeText(this, Integer.toString(Thread.currentThread().getPriority()), Toast.LENGTH_SHORT);
+    	calcBpmThread.setPriority(7);
+		calcBpmThread.start();
+		mProgressDialog.show();
+		updateProgressThread.start();		
     }
     
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
