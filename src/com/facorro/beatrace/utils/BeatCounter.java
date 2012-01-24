@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class BeatCounter {	
+public class BeatCounter implements BeatListener {
 	private static final float NS2S = 1.0f / 1000000000.0f;
 	private static final int HISTORY_VALUES = 20;
 	private static final int SECONDS_IN_MINUTES = HISTORY_VALUES * 60;
@@ -63,5 +63,9 @@ public class BeatCounter {
 			return SECONDS_IN_MINUTES / lapse;
 		else
 			return 0;
+	}
+
+	public void beat() {
+		this.tap();		
 	}	
 }	

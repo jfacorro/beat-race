@@ -24,6 +24,10 @@ public class Sound {
 		cPlay();
 	}
 	
+	public void stop() {
+		
+	}
+	
 	public void pause()
 	{
 		cPause();
@@ -106,5 +110,4 @@ public class Sound {
 	private native int cGetPosition();
 	private static native int cGetEnoughSamples();
 	private static native int cGetProcessedSamples();
-	
 }

@@ -12,6 +12,9 @@ public class BeatSensor implements SensorEventListener {
 
 	private float[] gravity;
 	
+	/**
+	 * Sensors related API objects
+	 */
 	private SensorManager sensorManager;
 	private Sensor gravitySensor;
 	private Sensor linearAccelerationSensor;

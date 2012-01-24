@@ -20,7 +20,8 @@ public class CycleBeatDetection implements BeatDetection {
 	
 	private BeatListener beatListener;
 	
-	public CycleBeatDetection() {
+	public CycleBeatDetection(BeatListener beatListener) {
+		this.beatListener = beatListener;
 		this.values = new LinkedList<Float>();
 	}
 	

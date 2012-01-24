@@ -8,25 +8,21 @@ import java.util.LinkedList;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.Context;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.Environment;
-import android.view.View;
+import android.os.IBinder;
 import android.widget.Toast;
 
-import com.facorro.beatrace.fmod.Sound;
-import com.facorro.beatrace.fmod.System;
+import com.facorro.beatrace.SongBeatPlayBackService.ServiceBinder;
 import com.facorro.beatrace.utils.BeatCounter;
-import com.facorro.beatrace.utils.BeatListener;
 
-public class SongPlayerActivity extends Activity implements SensorEventListener, BeatListener {
+public class SongPlayerActivity extends Activity {
 	
 	public enum SongPlayerState {
 		INITIALIZING,
@@ -37,16 +33,8 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		STOPPING
 	}
 	
-	private final float GRAVITY_INVERSE = 1 / 9.8f;
-	
 	ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, 75);
-	/**
-	 * Sensors related API objects
-	 */
-	private SensorManager sensorManager;
-	private Sensor gravitySensor;
-	private Sensor linearAccelerationSensor;
-	
+
 	private String filename;
 	
 	/**
@@ -54,90 +42,87 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 	 */
 	private SongView songView;
 	
-	private float originalFrequency;
-	
 	private List<Float> log = new LinkedList<Float>(); 
 	
 	/**
 	 * Bpm Reader used to calculate the bpm based on taps
 	 */
 	private BeatCounter bpmReader = new BeatCounter();
+	
+	private boolean serviceBound;
+	private SongBeatPlayBackService playbackService;
+	
+	/** Defines callbacks for service binding, passed to bindService() */
+    private ServiceConnection connection = new ServiceConnection() {
 
-	private float[] gravity;
+		public void onServiceDisconnected(ComponentName name) {
+			serviceBound = false;			
+		}
+		
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			 // We've bound to LocalService, cast the IBinder and get LocalService instance
+			Toast.makeText(SongPlayerActivity.this, "onServiceConnected...", Toast.LENGTH_SHORT).show();
+			ServiceBinder binder = (ServiceBinder) service;
+			playbackService = binder.getService();
+            serviceBound = true;
+            playSong();
+		}
+	};
+
 	private float songBpm;
 	private float userBpm;
-	private System fmodSystem = new com.facorro.beatrace.fmod.System();
-	private Sound sound;
 	
-	private SongPlayerState state = SongPlayerState.INITIALIZING;
 	
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
 	{
         super.onCreate(savedInstanceState);
-        
-        Toast.makeText(this, "Create event...", Toast.LENGTH_SHORT).show();
 
+        Toast.makeText(this, "Create event...", Toast.LENGTH_SHORT).show();
+        
         setContentView(R.layout.song_player);
         
-        // Get filename from intent data
-        this.filename = this.getIntent().getStringExtra("filename");
-        this.filename = this.filename.replace("/mnt/", "/");
         // Get song view instance from layout
         this.songView = (SongView)this.findViewById(R.id.songView);
-        this.songView.getThread().setBeatListener(this);
-        
-        // Find needed sensors to detect beat while running
-        this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);        
-        this.gravitySensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-        this.linearAccelerationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
-        
-        this.state = SongPlayerState.LOADING_SONG;
-        // Initialize FMOD system, load song and get BPM
-        this.fmodSystem.init();
-    	this.sound = new Sound(this.filename);
-    	this.sound.open();
-		this.originalFrequency = this.sound.getFrequency();
-		
-		this.calculateBpm();
+        //this.songView.getThread().setBeatListener(this);
+        this.filename = this.getIntent().getStringExtra("filename").replace("/mnt/", "/");
+
+        Intent intent = new Intent(this, SongBeatPlayBackService.class);
+        this.startService(intent);
+	}
+	
+	protected void playSong() {
+		this.playbackService.play(this.filename);		
+	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+        Intent intent = new Intent(this, SongBeatPlayBackService.class);
+        this.bindService(intent, connection, Context.BIND_AUTO_CREATE);
 	}
 	
     @Override
     protected void onResume() 
     {
-    	super.onResume();
-    	
-    	Toast.makeText(this, "Resume event...", Toast.LENGTH_SHORT).show();
-    	
-    	this.registerSensorListeners();      
-    }
-    
-    private void registerSensorListeners()
-    {
-    	if(this.state == SongPlayerState.PLAYING_SONG)
-        {
-    		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
-    		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
-        }
-    }
+    	super.onResume();    	
+    	Toast.makeText(this, "Resume event...", Toast.LENGTH_SHORT).show(); 
+    }    
 
     @Override
     protected void onPause()
     {
-		super.onPause();
-		
+		super.onPause();		
 		Toast.makeText(this, "Pause event...", Toast.LENGTH_SHORT).show();
-
-		this.sensorManager.unregisterListener(this);
     }
     
     @Override
     public void onStop()
     {
     	super.onStop();
-
     	Toast.makeText(this, "Stop event...", Toast.LENGTH_SHORT).show();
+    	this.unbindService(connection);
     }
     
     @Override
@@ -147,10 +132,9 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
     	
     	Toast.makeText(this, "Destroy event...", Toast.LENGTH_SHORT).show();
     	
-    	this.fmodSystem.stop();
+    	Intent intent = new Intent(SongPlayerActivity.this, SongBeatPlayBackService.class);
+        this.stopService(intent);
     	
-    	this.state = SongPlayerState.STOPPING;
-
 		// Create log file for song    	
 		try 
 		{
@@ -174,24 +158,6 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 			e.printStackTrace();
 		}
     }
-	
-	/**
-	 * Slows down the song
-	 * @param view
-	 */
-	public void slower(View view)
-	{
-		this.sound.setFrequency(this.sound.getFrequency() - 100);
-	}
-	
-	/**
-	 * Speeds up the song
-	 * @param view
-	 */
-	public void faster(View view)
-	{
-		this.sound.setFrequency(this.sound.getFrequency() + 100);
-	}
 	
 	private void updateBpm()
 	{
@@ -225,79 +191,5 @@ public class SongPlayerActivity extends Activity implements SensorEventListener,
 		});
 		
 		toneThread.start();
-	}
-	
-    public void calculateBpm()
-    {
-    	Thread calcBpmThread = new Thread(new Runnable() {
-			
-			public void run() {
-    			state = SongPlayerState.CALCULATING_BPM;
-    	    	songBpm = sound.getBpm();
-    			songView.getThread().setSongBpm(songBpm);
-    			sound.play();
-    			state = SongPlayerState.PLAYING_SONG;
-    			registerSensorListeners();
-				
-			}
-		});
-    	
-    	// Create progress dialog.
-    	final ProgressDialog mProgressDialog = new ProgressDialog(SongPlayerActivity.this);    	
-    	mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        mProgressDialog.setMax(100);
-		
-		Thread updateProgressThread = new Thread(new Runnable() {			
-			public void run() {
-    			int total = Sound.getEnoughSamples();
-    			int read = 0;
-    			int completed = 0;
-
-    			while(completed < 100 && mProgressDialog.isShowing())
-    			{
-    				try 
-    				{
-	    				completed = read * 100 / total;
-	    				mProgressDialog.setProgress(completed);	
-	    				read = Sound.getProcessedSamples();
-
-						Thread.sleep(500);
-					} 
-    				catch (InterruptedException e) 
-    				{
-						e.printStackTrace();
-					}
-    			}
-    			mProgressDialog.dismiss();				
-			}
-		});
-
-    	Toast.makeText(this, Integer.toString(Thread.currentThread().getPriority()), Toast.LENGTH_SHORT);
-    	calcBpmThread.setPriority(7);
-		calcBpmThread.start();
-		mProgressDialog.show();
-		updateProgressThread.start();		
-    }
-    
-	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		// TODO Auto-generated method stub
-	}
-
-	public void onSensorChanged(SensorEvent event) {
-		if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
-		{
-			this.gravity = event.values.clone();
-		}
-		else if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
-		{
-			// Use gravity values to find out projection in the
-			// z axis.
-			float x = event.values[0] * this.gravity[0];
-			float y = event.values[1] * this.gravity[1];
-			float z = event.values[2] * this.gravity[2];
-			float value = (x + y + z) * GRAVITY_INVERSE;
-
-			this.songView.getThread().addValue(value);
-		}			
 	}
 }
