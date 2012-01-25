@@ -1,13 +1,14 @@
 package com.facorro.beatrace.utils;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 public class CycleBeatDetection implements BeatDetection {
-	private static final float TAP_THRESHOLD_VALUE = 2.0f;
-	private static final int MAX_VALUES = 20;
-	private static final float INIT_MIN_VALUE = -2.0f;
-	private static final float INIT_MAX_VALUE = 2.0f;
+	public static final float TAP_THRESHOLD_VALUE = 2.0f;
+	public static final int MAX_VALUES = 20;
+	public static final float INIT_MIN_VALUE = -2.0f;
+	public static final float INIT_MAX_VALUE = 2.0f;
 
 	private List<Float> values;
 	
@@ -18,10 +19,10 @@ public class CycleBeatDetection implements BeatDetection {
 	private float lastSlope;
 	private double cycle;
 	
-	private BeatListener beatListener;
+	private List<BeatListener> beatListeners;
 	
-	public CycleBeatDetection(BeatListener beatListener) {
-		this.beatListener = beatListener;
+	public CycleBeatDetection() {
+		this.beatListeners = new ArrayList<BeatListener>();
 		this.values = new LinkedList<Float>();
 	}
 	
@@ -47,8 +48,29 @@ public class CycleBeatDetection implements BeatDetection {
 		this.detectCycle(value);
 	}
 	
-	public void setBeatListener(BeatListener beatListener) {
-		this.beatListener = beatListener;
+	public void registerListener(BeatListener beatListener) {
+		this.beatListeners.add(beatListener);
+	}
+	
+	public void notifyListeners()	{
+		for(BeatListener listener : this.beatListeners)
+			listener.beat();
+	}
+	
+	public List<Float> getValues() {
+		return this.values;
+	}
+	
+	public float getMin() {
+		return this.minValue;
+	}
+
+	public float getMax() {
+		return this.minValue;
+	}
+	
+	public float getMedium() {
+		return this.mediumValue;
 	}
 	
 	private void updateMediumValue() {
@@ -75,7 +97,7 @@ public class CycleBeatDetection implements BeatDetection {
 		
 		if(this.cycle == 2)
 		{
-			this.beatListener.beat();
+			this.notifyListeners();
 			this.cycle = 0;
 		}
 	}

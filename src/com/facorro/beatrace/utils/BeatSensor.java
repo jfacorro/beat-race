@@ -29,8 +29,8 @@ public class BeatSensor implements SensorEventListener {
 	}
 	
 	public void startListening()	{
-		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
-		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
+		this.sensorManager.registerListener(this, this.gravitySensor, 100000);
+		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 100000);
 	}
 	
 	public void stopListening() {

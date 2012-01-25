@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -17,8 +18,11 @@ import android.os.Environment;
 import android.os.IBinder;
 
 import com.facorro.beatrace.SongPlaybackService.ServiceBinder;
+import com.facorro.beatrace.SongView.SongThread;
+import com.facorro.beatrace.fmod.Sound;
+import com.facorro.beatrace.utils.BeatListener;
 
-public class SongPlayerActivity extends Activity {
+public class SongPlayerActivity extends Activity implements BeatListener {
 
 	// Object that contains both values and the drawing logic
 	private SongView songView;
@@ -116,11 +120,45 @@ public class SongPlayerActivity extends Activity {
 	public void beat() {
 		float userBpm = this.playbackService.getUserBpm();
 		float songBpm = this.playbackService.getSongBpm();
+		this.songView.getThread().setSongBpm(songBpm);
 		this.songView.getThread().setUserBpm(userBpm);
-		this.songView.getThread().setUserBpm(songBpm);
-		
     	log.add(songBpm);
     	log.add(userBpm);
     	log.add(userBpm / songBpm);
+	}
+
+	public void showProgressDialog() {
+    	// Create progress dialog.
+    	final ProgressDialog progressDialog = new ProgressDialog(this);
+    	progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setMax(100);
+		
+		Thread updateProgressThread = new Thread(new Runnable() {
+			public void run() {
+    			int total = Sound.getEnoughSamples();
+    			int read = 0;
+    			int completed = 0;
+    			
+    			while(completed < 100 && progressDialog.isShowing()) {
+    				try {
+	    				completed = read * 100 / total;
+	    				progressDialog.setProgress(completed);	
+	    				read = Sound.getProcessedSamples();
+
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+    			}
+    			progressDialog.dismiss();
+			}
+		});
+		
+		progressDialog.show();		
+		updateProgressThread.start();		
+	}
+
+	public SongThread getSongView() {
+		return this.songView.getThread();
 	}
 }

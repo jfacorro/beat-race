@@ -76,18 +76,6 @@ public class BeatCounter implements BeatListener {
 	ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, 75);
 	
 	private void playTone() {
-		Thread toneThread = new Thread(new Runnable() {
-			public void run() {
-				toneGenerator.startTone(ToneGenerator.TONE_DTMF_0);
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				toneGenerator.stopTone();
-			}
-		});
-		
-		toneThread.start();
+		toneGenerator.startTone(ToneGenerator.TONE_DTMF_0, 100);
 	}
 }	

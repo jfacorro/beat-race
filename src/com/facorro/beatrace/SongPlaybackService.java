@@ -1,6 +1,5 @@
 package com.facorro.beatrace;
 
-import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -58,7 +57,10 @@ public class SongPlaybackService extends Service {
 
 		SensorManager sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);		
 		this.beatCounter = new BeatCounter();
-		this.beatDetection = new CycleBeatDetection(beatCounter);
+
+		this.beatDetection = new CycleBeatDetection();
+		this.beatDetection.registerListener(beatCounter);
+
 		this.sensor = new BeatSensor(beatDetection, sensorManager);
 		this.dataAccess.open();
 	}
@@ -135,7 +137,6 @@ public class SongPlaybackService extends Service {
 	}
 	
     private void calculateSongBpm() {
-
     	Thread calcBpmThread = new Thread(new Runnable() {
 			public void run() {
     	    	songBpm = sound.getBpm();
@@ -144,37 +145,10 @@ public class SongPlaybackService extends Service {
 			}
 		});
     	
-    	// Create progress dialog.
-    	final ProgressDialog progressDialog = new ProgressDialog(this.activity);
-    	progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        progressDialog.setMax(100);
-		
-		Thread updateProgressThread = new Thread(new Runnable() {
-			public void run() {
-    			int total = Sound.getEnoughSamples();
-    			int read = 0;
-    			int completed = 0;
-    			
-    			while(completed < 100 && progressDialog.isShowing()) {
-    				try {
-	    				completed = read * 100 / total;
-	    				progressDialog.setProgress(completed);	
-	    				read = Sound.getProcessedSamples();
-
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-    			}
-    			progressDialog.dismiss();
-			}
-		});
-
     	calcBpmThread.setPriority(7);
 		calcBpmThread.start();
-		progressDialog.show();
-		updateProgressThread.start();
 		
+    	this.activity.showProgressDialog();
     }
     
 	public float getUserBpm() {
@@ -187,5 +161,7 @@ public class SongPlaybackService extends Service {
 	
 	public void setActivity(SongPlayerActivity activity) {
 		this.activity = activity;
+		this.beatDetection.registerListener(activity);
+		activity.getSongView().setBeatDetection(this.beatDetection);
 	}
 }
