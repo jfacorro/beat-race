@@ -28,12 +28,12 @@ public class BeatSensor implements SensorEventListener {
         this.linearAccelerationSensor = this.sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 	}
 	
-	public void register()	{
+	public void startListening()	{
 		this.sensorManager.registerListener(this, this.gravitySensor, 75000);
 		this.sensorManager.registerListener(this, this.linearAccelerationSensor, 75000);
 	}
 	
-	public void unregister() {
+	public void stopListening() {
 		this.sensorManager.unregisterListener(this);
 	}
 
@@ -42,10 +42,10 @@ public class BeatSensor implements SensorEventListener {
 	}
 
 	public void onSensorChanged(SensorEvent event) {
-		if(event.sensor.getType() == Sensor.TYPE_GRAVITY)
+		if(event.sensor.getType() == Sensor.TYPE_GRAVITY) 
 		{
 			this.gravity = event.values.clone();
-		}
+		} 
 		else if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION)
 		{
 			// Use gravity values to find out projection in the

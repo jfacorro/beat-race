@@ -3,6 +3,9 @@ package com.facorro.beatrace.utils;
 import java.util.LinkedList;
 import java.util.List;
 
+import android.media.AudioManager;
+import android.media.ToneGenerator;
+
 
 public class BeatCounter implements BeatListener {
 	private static final float NS2S = 1.0f / 1000000000.0f;
@@ -22,7 +25,7 @@ public class BeatCounter implements BeatListener {
 		this.lapse = 0;
 	}
 
-	public void tap() {
+	private void tap() {
 		long instant = System.nanoTime();
 
 		if(this.start == 0)
@@ -35,7 +38,7 @@ public class BeatCounter implements BeatListener {
 		this.dirty = true;
 	}
 	
-	public float getLapse() {
+	private float getLapse() {
 		if(this.dirty)
 		{
 			if(this.lapseValues.size() >= HISTORY_VALUES)
@@ -66,6 +69,25 @@ public class BeatCounter implements BeatListener {
 	}
 
 	public void beat() {
-		this.tap();		
+		this.tap();
+		this.playTone();
 	}	
+	
+	ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_MUSIC, 75);
+	
+	private void playTone() {
+		Thread toneThread = new Thread(new Runnable() {
+			public void run() {
+				toneGenerator.startTone(ToneGenerator.TONE_DTMF_0);
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				toneGenerator.stopTone();
+			}
+		});
+		
+		toneThread.start();
+	}
 }	

@@ -4,25 +4,6 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical" >
-	<LinearLayout
-		android:layout_width="fill_parent"
-	    android:layout_height="wrap_content"
-	    android:gravity="center_horizontal"
-	    android:orientation="horizontal">
-		<Button
-		    android:id="@+id/btnSlower"
-		    android:layout_width="100dp"
-		    android:layout_height="wrap_content"
-		    android:onClick="slower"
-		    android:text="@string/slower" />
-		
-		<Button
-		    android:id="@+id/btnFaster"
-		    android:layout_width="100dp"
-		    android:layout_height="wrap_content"
-		    android:onClick="faster"
-		    android:text="@string/faster" />
-	</LinearLayout>
 
 	<com.facorro.beatrace.SongView
 	    android:id="@+id/songView"

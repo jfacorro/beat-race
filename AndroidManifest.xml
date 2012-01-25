@@ -26,6 +26,6 @@
             android:name="com.facorro.beatrace.SongPlayerActivity"
             android:screenOrientation="portrait">
         </activity>
-        <service android:name=".SongBeatPlayBackService"></service>
+        <service android:name=".SongPlaybackService"></service>
     </application>
 </manifest>
